@@ -1,34 +1,35 @@
-r"""床指紋の提案手法：目地検出・透視変換・座標近傍照合。
+r"""床指紋の提案手法：1タイル透視補正 + 座標近傍照合 + RANSAC。
 
-先行研究再現の step3_senko_saigen.py と同じフォルダに置いて使う。
-step3 の平均値差分フィルタと B-ORB 実装を再利用し、次を変更する。
+step3_senko_saigen.py と同じフォルダに保存してください。
+既存の先行研究コードは変更しません。OpenCV、NumPyだけを追加で使います。
 
-  先行研究再現：BFMatcher -> RANSAC -> Homographyによる事後評価
-  提案手法　　：目地検出 -> 透視変換 -> タイル分割
-                  -> 同一座標近傍だけでHamming距離を比較
+登録：既存 gazou/db_cache の「分割タイル画像」を読み、同じ正方形へ
+正規化して特徴を再抽出し、提案手法専用 gazou/teian_db_cache に保存。
+旧DB特徴量は画像サイズ・外周除外条件が異なるため、そのまま流用しません。
+撮影：2x2全体は不要。完全に写ったタイルを個別に正方形へ透視補正。
+各タイルを全DBタイルと比較し、0/90/180/270度を確認します。
+対応候補は座標近傍のHamming距離から作り、step3のRANSACで精査します。
 
-注意：本コードの目地検出・座標近傍照合・判定閾値は提案手法であり、
-藤田らの先行研究に記載された処理ではない。判定閾値は10地点以上の
-同地点・異地点データから決める必要があるため、初期値は暫定値である。
+--satsuei-points は「1タイル」の4隅。x,y;x,y;x,y;x,y。
+--quad は同じ指定を複数回指定できます。座標は元の撮影画像上の画素です。
+未指定なら目地候補線の交点からタイル候補を自動検出します。
+自動検出は実験実装であり、壁・影・傷の誤検出もあります。
+query_detection.jpg で、選んだ領域がタイル1枚か必ず確認してください。
+--detect-only は検出結果と切り出し画像だけを保存します。
 
-実行例：
-  .\.venv\Scripts\python.exe .\step4_teian.py ^
-    --touroku gazou\reg_01.jpg --satsuei gazou\query_01.jpg
-
-自動目地検出が難しい画像では、4隅を左上、右上、右下、左下の順で指定：
-  --touroku-points "120,100;980,120;960,1010;100,990"
-  --satsuei-points "90,130;1000,90;1030,980;110,1020"
-
-合成画像による動作確認：
-  .\.venv\Scripts\python.exe .\step4_teian.py --self-test
+初期検証の地点得点は、候補タイルとその地点の登録タイルの最高得点。
+平均による4タイル集約はしません。部分的に写った場所も検証するためです。
+6%の判定基準は暫定値です。検出候補数が増えると誤照合も増え得るため、
+同地点・異地点データで検証してから決めてください。
+このコードは先行研究の再現ではなく、新しい提案手法の実験用コードです。
 """
 
 from __future__ import annotations
 
 import argparse
+import csv
 from dataclasses import asdict, dataclass, replace
 from datetime import datetime
-import hashlib
 import json
 import math
 from pathlib import Path
@@ -39,648 +40,650 @@ import time
 try:
     import cv2
     import numpy as np
-except ImportError:
-    print("OpenCVとNumPyが必要です。")
-    raise SystemExit(2)
-
-try:
     from step3_senko_saigen import (
-        Config as BaseConfig,
-        BIT_COUNTS,
-        balanced_orb,
-        mean_difference_filter,
-        points_from_keypoints,
-        read_image,
-        save_image,
+        Config as BaseConfig, BIT_COUNTS, balanced_orb,
+        mean_difference_filter, points_from_keypoints, read_image, save_image,
+        numbered_images, split_four_tiles, paper_ransac,
+        homography_from_consensus, validate_alignment,
     )
 except ImportError as exc:
-    print("step3_senko_saigen.pyをstep4_teian.pyと同じフォルダに置いてください。")
-    raise SystemExit(2) from exc
-
+    print("OpenCV・NumPyをインストールし、step3_senko_saigen.pyを同じフォルダへ置いてください。")
+    print(exc)
+    raise SystemExit(2)
 
 BASE_DIR = Path(__file__).resolve().parent
+CACHE_FORMAT = "floor-fingerprint-proposal-single-tile-v1"
 
 
 @dataclass(frozen=True)
 class Config:
-    # 透視変換後の2x2全体の一辺。4タイルは各512pxになる。
-    warp_size: int = 1024
-    # 目地と外周を特徴抽出から除くため、各タイルの内側を切り出す割合。
-    tile_margin_ratio: float = 0.06
-    # 目地検出用。大きな画像だけ縮小し、検出した座標は元画像へ戻す。
-    detection_max_side: int = 1400
-    canny_low: int = 35
-    canny_high: int = 110
-    hough_threshold: int = 70
-    hough_min_length_ratio: float = 0.32
-    hough_max_gap_ratio: float = 0.04
-    line_merge_ratio: float = 0.025
-    # 透視変換後、同じ場所とみなす座標の半径。
-    spatial_radius_px: float = 18.0
-    # ORB記述子は256 bit。先行研究の妥当性評価と同じ上限を初期値にする。
-    hamming_threshold: int = 100
-    # 提案手法の判定閾値は未確定。10地点の実験後に決定する暫定値。
-    decision_threshold: float = 0.06
-    # 1タイルあたりのB-ORB上限。4枚合計で最大10000点。
+    tile_size: int = 512
     features_per_tile: int = 2500
-    fast_threshold: int = 20
-    draw_matches: int = 300
-
-
-def check_config(c: Config) -> None:
-    if c.warp_size < 256 or c.warp_size % 2:
-        raise ValueError("warp-sizeは256以上の偶数にしてください。")
-    if not 0 <= c.tile_margin_ratio < 0.25:
-        raise ValueError("tile-marginは0以上0.25未満にしてください。")
-    if c.spatial_radius_px <= 0 or not 0 <= c.hamming_threshold <= 256:
-        raise ValueError("座標半径とHamming閾値を確認してください。")
-    if not 0 <= c.decision_threshold <= 1:
-        raise ValueError("判定閾値は0から1の範囲にしてください。")
-
-
-def parse_points(text: str | None) -> np.ndarray | None:
-    if text is None:
-        return None
-    try:
-        points = [[float(value) for value in pair.split(",")]
-                  for pair in text.split(";")]
-    except ValueError as exc:
-        raise ValueError("4隅は x,y;x,y;x,y;x,y の形式で指定してください。") from exc
-    array = np.asarray(points, dtype=np.float32)
-    if array.shape != (4, 2):
-        raise ValueError("4隅を左上、右上、右下、左下の順に4点指定してください。")
-    return array
-
-
-def order_quad(points: np.ndarray) -> np.ndarray:
-    """4点を左上、右上、右下、左下の順に並べる。"""
-    points = np.asarray(points, dtype=np.float32).reshape(4, 2)
-    center = points.mean(axis=0)
-    angles = np.arctan2(points[:, 1] - center[1], points[:, 0] - center[0])
-    cyclic = points[np.argsort(angles)]
-    start = int(np.argmin(cyclic[:, 0] + cyclic[:, 1]))
-    cyclic = np.roll(cyclic, -start, axis=0)
-    # 画像座標でTLから時計回りなら2点目がTR、反時計回りならBL。
-    if cyclic[1, 0] < cyclic[-1, 0]:
-        cyclic = cyclic[[0, 3, 2, 1]]
-    return cyclic.astype(np.float32)
-
-
-def line_intersection(line1: np.ndarray, line2: np.ndarray) -> np.ndarray | None:
-    a1, b1, c1 = line1
-    a2, b2, c2 = line2
-    determinant = a1 * b2 - a2 * b1
-    if abs(determinant) < 1e-8:
-        return None
-    return np.array([(b1 * c2 - b2 * c1) / determinant,
-                     (c1 * a2 - c2 * a1) / determinant], dtype=np.float64)
-
-
-def segment_to_line(segment: np.ndarray) -> np.ndarray | None:
-    x1, y1, x2, y2 = map(float, segment)
-    a, b = y1 - y2, x2 - x1
-    norm = math.hypot(a, b)
-    if norm < 1e-8:
-        return None
-    a, b = a / norm, b / norm
-    return np.array([a, b, -(a * x1 + b * y1)], dtype=np.float64)
-
-
-def _cluster_orientations(angles: np.ndarray) -> np.ndarray:
-    """180度周期の線分角を2方向へ分ける。"""
-    samples = np.column_stack((np.cos(2 * angles), np.sin(2 * angles))).astype(np.float32)
-    if len(samples) < 6:
-        raise ValueError("目地候補の直線が不足しています。")
-    criteria = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_MAX_ITER, 50, 1e-4)
-    _, labels, centers = cv2.kmeans(samples, 2, None, criteria, 10,
-                                     cv2.KMEANS_PP_CENTERS)
-    directions = 0.5 * np.arctan2(centers[:, 1], centers[:, 0])
-    difference = abs(math.sin(float(directions[0] - directions[1])))
-    if difference < math.sin(math.radians(55)):
-        raise ValueError("ほぼ直交する2方向の目地線を検出できませんでした。")
-    return labels.ravel()
-
-
-def _merge_lines(records: list[tuple[np.ndarray, float, float]],
-                 merge_distance: float) -> list[dict]:
-    """画像中心での符号付き位置が近い線を同じ目地として束ねる。"""
-    records.sort(key=lambda item: item[1])
-    groups: list[list[tuple[np.ndarray, float, float]]] = []
-    for record in records:
-        if not groups or abs(record[1] - np.average(
-                [r[1] for r in groups[-1]], weights=[r[2] for r in groups[-1]])) > merge_distance:
-            groups.append([record])
-        else:
-            groups[-1].append(record)
-    merged = []
-    for group in groups:
-        weights = np.asarray([r[2] for r in group], dtype=np.float64)
-        reference = group[0][0].copy()
-        aligned = []
-        for line, _, _ in group:
-            aligned.append(line if np.dot(line[:2], reference[:2]) >= 0 else -line)
-        line = np.average(np.asarray(aligned), axis=0, weights=weights)
-        line /= max(np.linalg.norm(line[:2]), 1e-12)
-        position = float(np.average([r[1] for r in group], weights=weights))
-        merged.append({"line": line, "position": position,
-                       "score": float(weights.sum()), "segments": len(group)})
-    return merged
-
-
-def _select_three_grid_lines(lines: list[dict], extent: float) -> list[np.ndarray]:
-    """中央目地と、その両側の外周目地を選ぶ。"""
-    if len(lines) < 3:
-        raise ValueError("2x2タイルに必要な3本の目地を検出できませんでした。")
-    minimum_spacing = 0.12 * extent
-    central_candidates = sorted(lines, key=lambda x: abs(x["position"]))[:min(4, len(lines))]
-    best = None
-    for center in central_candidates:
-        negative = [x for x in lines
-                    if x["position"] < center["position"] - minimum_spacing]
-        positive = [x for x in lines
-                    if x["position"] > center["position"] + minimum_spacing]
-        for left in negative:
-            for right in positive:
-                spacing1 = center["position"] - left["position"]
-                spacing2 = right["position"] - center["position"]
-                ratio = min(spacing1, spacing2) / max(spacing1, spacing2)
-                if ratio < 0.45:
-                    continue
-                # 長い線を優先しつつ、中央線が画像中央付近にある組を選ぶ。
-                span = right["position"] - left["position"]
-                score = (left["score"] + center["score"] + right["score"])
-                # 2x2全体の外周を選ぶため、等間隔性に加えて広い範囲を
-                # 覆う3本を優先する。これがないとタイル内部の長い傷を
-                # 外周目地と誤認しやすい。
-                score *= (0.5 + 0.5 * ratio) * (span / max(extent, 1.0)) ** 2
-                score /= 1.0 + abs(center["position"]) / max(extent, 1.0)
-                if best is None or score > best[0]:
-                    best = (score, [left["line"], center["line"], right["line"]])
-    if best is None:
-        raise ValueError("等間隔に並ぶ3本の目地線を選べませんでした。")
-    return best[1]
-
-
-def detect_grid_quad(image: np.ndarray, c: Config):
-    """Hough線分から2x2タイル外周の4点を推定する。"""
-    original_h, original_w = image.shape[:2]
-    scale = min(1.0, c.detection_max_side / max(original_h, original_w))
-    work = cv2.resize(image, (round(original_w * scale), round(original_h * scale)),
-                      interpolation=cv2.INTER_AREA) if scale < 1 else image.copy()
-    gray = cv2.cvtColor(work, cv2.COLOR_BGR2GRAY)
-    gray = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8)).apply(gray)
-    gray = cv2.GaussianBlur(gray, (5, 5), 0)
-    edges = cv2.Canny(gray, c.canny_low, c.canny_high, L2gradient=True)
-    extent = float(min(work.shape[:2]))
-    segments = cv2.HoughLinesP(
-        edges, 1, np.pi / 360, c.hough_threshold,
-        minLineLength=max(30, round(c.hough_min_length_ratio * extent)),
-        maxLineGap=max(5, round(c.hough_max_gap_ratio * extent)))
-    if segments is None or len(segments) < 6:
-        raise ValueError("目地候補の線分を十分に検出できませんでした。")
-    # OpenCV 4系は(N,1,4)、5系は環境により(N,4)で返るため両対応。
-    segments = np.asarray(segments).reshape(-1, 4)
-    vectors = segments[:, 2:4] - segments[:, 0:2]
-    lengths = np.linalg.norm(vectors, axis=1)
-    angles = np.arctan2(vectors[:, 1], vectors[:, 0])
-    labels = _cluster_orientations(angles)
-    center = np.array([work.shape[1] / 2, work.shape[0] / 2], dtype=np.float64)
-    families = []
-    all_merged = []
-    for family_id in (0, 1):
-        records = []
-        family_indices = np.flatnonzero(labels == family_id)
-        if len(family_indices) < 3:
-            raise ValueError("一方向の目地候補が不足しています。")
-        normal_reference = None
-        for index in family_indices:
-            line = segment_to_line(segments[index])
-            if line is None:
-                continue
-            if normal_reference is None:
-                normal_reference = line[:2].copy()
-            if np.dot(line[:2], normal_reference) < 0:
-                line = -line
-            position = float(line[0] * center[0] + line[1] * center[1] + line[2])
-            records.append((line, position, float(lengths[index])))
-        merged = _merge_lines(records, c.line_merge_ratio * extent)
-        selected = _select_three_grid_lines(merged, extent)
-        families.append(selected)
-        all_merged.append(merged)
-
-    outer1 = [families[0][0], families[0][2]]
-    outer2 = [families[1][0], families[1][2]]
-    corners = []
-    for line1 in outer1:
-        for line2 in outer2:
-            point = line_intersection(line1, line2)
-            if point is None:
-                raise ValueError("目地線の交点を計算できませんでした。")
-            corners.append(point / scale)
-    quad = order_quad(np.asarray(corners))
-    margin = 0.18 * max(original_h, original_w)
-    if ((quad[:, 0] < -margin).any() or (quad[:, 0] > original_w + margin).any()
-            or (quad[:, 1] < -margin).any() or (quad[:, 1] > original_h + margin).any()):
-        raise ValueError("検出した2x2タイル領域が画像外へ大きく外れています。")
-
-    overlay = work.copy()
-    colors = ((255, 80, 30), (30, 220, 255))
-    for family_id, selected in enumerate(families):
-        for line in selected:
-            a, b, cc = line
-            # 十分長い2点を作って描画する。
-            if abs(b) > abs(a):
-                p1 = (0, round(-cc / b))
-                p2 = (work.shape[1] - 1,
-                      round(-(a * (work.shape[1] - 1) + cc) / b))
-            else:
-                p1 = (round(-cc / a), 0)
-                p2 = (round(-(b * (work.shape[0] - 1) + cc) / a),
-                      work.shape[0] - 1)
-            cv2.line(overlay, p1, p2, colors[family_id], 3, cv2.LINE_AA)
-    scaled_quad = np.round(quad * scale).astype(np.int32)
-    cv2.polylines(overlay, [scaled_quad], True, (0, 255, 0), 4, cv2.LINE_AA)
-    return quad, overlay, edges, {
-        "detected_segments": int(len(segments)),
-        "merged_lines_per_direction": [len(group) for group in all_merged],
-        "detection_scale": scale,
-    }
-
-
-def warp_grid(image: np.ndarray, quad: np.ndarray, size: int):
-    destination = np.array([[0, 0], [size - 1, 0],
-                            [size - 1, size - 1], [0, size - 1]], np.float32)
-    matrix = cv2.getPerspectiveTransform(order_quad(quad), destination)
-    warped = cv2.warpPerspective(image, matrix, (size, size),
-                                 flags=cv2.INTER_LINEAR,
-                                 borderMode=cv2.BORDER_REFLECT_101)
-    return warped, matrix
-
-
-def rotate_mosaic(image: np.ndarray, quarter_turns: int) -> np.ndarray:
-    return np.rot90(image, quarter_turns).copy()
-
-
-def tile_bounds(size: int, margin_ratio: float):
-    half = size // 2
-    margin = round(half * margin_ratio)
-    return [
-        (margin, margin, half - margin, half - margin),
-        (half + margin, margin, size - margin, half - margin),
-        (margin, half + margin, half - margin, size - margin),
-        (half + margin, half + margin, size - margin, size - margin),
-    ]
-
-
-def extract_tile_features(mosaic: np.ndarray, c: Config):
-    """4タイルを別々に処理し、座標だけ2x2全体へ戻す。"""
-    base = replace(BaseConfig(), image_scale=1.0, nfeatures=c.features_per_tile,
-                   fast_threshold=c.fast_threshold)
-    all_keypoints, all_descriptors, tile_stats = [], [], []
-    filtered_mosaic = np.full(mosaic.shape[:2], 128, np.uint8)
-    for tile_id, (x0, y0, x1, y1) in enumerate(
-            tile_bounds(c.warp_size, c.tile_margin_ratio)):
-        tile = mosaic[y0:y1, x0:x1]
-        gray = cv2.cvtColor(tile, cv2.COLOR_BGR2GRAY)
-        filtered = mean_difference_filter(gray, base.filter_radius)
-        filtered_mosaic[y0:y1, x0:x1] = filtered
-        keypoints, descriptors, layers = balanced_orb(filtered, base)
-        for keypoint in keypoints:
-            all_keypoints.append(cv2.KeyPoint(
-                keypoint.pt[0] + x0, keypoint.pt[1] + y0,
-                keypoint.size, keypoint.angle, keypoint.response,
-                keypoint.octave, tile_id))
-        if len(descriptors):
-            all_descriptors.extend(descriptors)
-        tile_stats.append({"tile": tile_id, "bounds": [x0, y0, x1, y1],
-                           "features": len(keypoints), "layers": layers})
-    descriptors = np.asarray(all_descriptors, np.uint8).reshape(-1, 32)
-    return all_keypoints, descriptors, filtered_mosaic, tile_stats
-
-
-def spatial_match(keypoints1, desc1: np.ndarray, keypoints2, desc2: np.ndarray,
-                  c: Config):
-    """同じタイルかつ座標半径内だけで記述子を比較し、1対1対応を作る。"""
-    points1, points2 = points_from_keypoints(keypoints1), points_from_keypoints(keypoints2)
-    result = {"source_features": len(points1), "target_features": len(points2),
-              "with_spatial_candidate": 0, "accepted": 0,
-              "fraction_of_source": 0.0, "fraction_of_candidate": 0.0,
-              "mean_hamming": None, "median_hamming": None}
-    if not len(points1) or not len(points2):
-        return [], result
-    radius = c.spatial_radius_px
-    bins: dict[tuple[int, int, int], list[int]] = {}
-    for index, (point, kp) in enumerate(zip(points2, keypoints2)):
-        cell = (kp.class_id, math.floor(point[0] / radius), math.floor(point[1] / radius))
-        bins.setdefault(cell, []).append(index)
-    proposals = []
-    for query_index, (point, kp) in enumerate(zip(points1, keypoints1)):
-        cell_x, cell_y = math.floor(point[0] / radius), math.floor(point[1] / radius)
-        candidates = []
-        for dy in (-1, 0, 1):
-            for dx in (-1, 0, 1):
-                candidates.extend(bins.get((kp.class_id, cell_x + dx, cell_y + dy), []))
-        if not candidates:
-            continue
-        ids = np.asarray(candidates, dtype=np.int64)
-        ids = ids[((points2[ids] - point) ** 2).sum(axis=1) <= radius ** 2]
-        if not len(ids):
-            continue
-        result["with_spatial_candidate"] += 1
-        distances = BIT_COUNTS[np.bitwise_xor(desc2[ids], desc1[query_index])].sum(axis=1)
-        best_position = int(np.argmin(distances))
-        distance = int(distances[best_position])
-        if distance <= c.hamming_threshold:
-            proposals.append((distance, query_index, int(ids[best_position])))
-    # 同じ撮影側特徴点を複数回使わない。Hamming距離が小さい対応を優先。
-    proposals.sort()
-    used_query, used_train, matches = set(), set(), []
-    for distance, query_index, train_index in proposals:
-        if query_index in used_query or train_index in used_train:
-            continue
-        used_query.add(query_index)
-        used_train.add(train_index)
-        matches.append(cv2.DMatch(query_index, train_index, float(distance)))
-    result["accepted"] = len(matches)
-    result["fraction_of_source"] = len(matches) / len(points1)
-    result["fraction_of_candidate"] = (
-        len(matches) / result["with_spatial_candidate"]
-        if result["with_spatial_candidate"] else 0.0)
-    if matches:
-        distances = np.asarray([m.distance for m in matches])
-        result["mean_hamming"] = float(distances.mean())
-        result["median_hamming"] = float(np.median(distances))
-    return matches, result
-
-
-def draw_grid_features(filtered: np.ndarray, keypoints):
-    return cv2.drawKeypoints(filtered, keypoints, None, color=(0, 255, 0))
-
-
-def make_manual_overlay(image: np.ndarray, quad: np.ndarray) -> np.ndarray:
-    overlay = image.copy()
-    cv2.polylines(overlay, [np.round(order_quad(quad)).astype(np.int32)],
-                    True, (0, 255, 0), max(2, round(max(image.shape[:2]) / 500)))
-    return overlay
-
-
-def analyze_orientation(registered: np.ndarray, query: np.ndarray,
-                        registered_features, c: Config, turns: int):
-    rotated = rotate_mosaic(query, turns)
-    kp1, desc1, _, _ = registered_features
-    kp2, desc2, filtered2, stats2 = extract_tile_features(rotated, c)
-    matches, metrics = spatial_match(kp1, desc1, kp2, desc2, c)
-    metrics["quarter_turns_ccw"] = turns
-    return {"mosaic": rotated, "keypoints": kp2, "descriptors": desc2,
-            "filtered": filtered2, "tile_stats": stats2,
-            "matches": matches, "metrics": metrics}
-
-
-def run_pair(path1: Path, path2: Path, output: Path, c: Config,
-             quad1: np.ndarray | None = None, quad2: np.ndarray | None = None,
-             verbose: bool = True) -> dict:
-    check_config(c)
-    output.mkdir(parents=True, exist_ok=False)
-    started = time.perf_counter()
-    image1, image2 = read_image(path1), read_image(path2)
-    timings = {}
-
-    clock = time.perf_counter()
-    if quad1 is None:
-        quad1, overlay1, edges1, detection1 = detect_grid_quad(image1, c)
-        detection1["mode"] = "automatic"
-    else:
-        quad1 = order_quad(quad1)
-        overlay1, edges1 = make_manual_overlay(image1, quad1), None
-        detection1 = {"mode": "manual"}
-    if quad2 is None:
-        quad2, overlay2, edges2, detection2 = detect_grid_quad(image2, c)
-        detection2["mode"] = "automatic"
-    else:
-        quad2 = order_quad(quad2)
-        overlay2, edges2 = make_manual_overlay(image2, quad2), None
-        detection2 = {"mode": "manual"}
-    timings["grout_detection_seconds"] = time.perf_counter() - clock
-
-    clock = time.perf_counter()
-    warped1, perspective1 = warp_grid(image1, quad1, c.warp_size)
-    warped2, perspective2 = warp_grid(image2, quad2, c.warp_size)
-    timings["perspective_seconds"] = time.perf_counter() - clock
-
-    clock = time.perf_counter()
-    registered_features = extract_tile_features(warped1, c)
-    kp1, desc1, filtered1, stats1 = registered_features
-    orientations = [analyze_orientation(warped1, warped2, registered_features, c, turns)
-                    for turns in range(4)]
-    best = max(orientations,
-               key=lambda item: (item["metrics"]["fraction_of_source"],
-                                 item["metrics"]["accepted"]))
-    timings["feature_and_spatial_match_seconds"] = time.perf_counter() - clock
-    metrics = best["metrics"]
-    success = metrics["fraction_of_source"] > c.decision_threshold
-    metrics["success"] = success
-    metrics["decision_threshold"] = c.decision_threshold
-    metrics["threshold_status"] = "provisional; calibrate with same/different-location data"
-
-    save_image(output / "01_touroku_original.jpg", image1)
-    save_image(output / "02_satsuei_original.jpg", image2)
-    save_image(output / "03_touroku_grout_detection.jpg", overlay1)
-    save_image(output / "04_satsuei_grout_detection.jpg", overlay2)
-    if edges1 is not None:
-        save_image(output / "05_touroku_edges.png", edges1)
-    if edges2 is not None:
-        save_image(output / "06_satsuei_edges.png", edges2)
-    save_image(output / "07_touroku_perspective.jpg", warped1)
-    save_image(output / "08_satsuei_perspective_best_rotation.jpg", best["mosaic"])
-    save_image(output / "09_touroku_filter.png", filtered1)
-    save_image(output / "10_satsuei_filter.png", best["filtered"])
-    save_image(output / "11_touroku_features.jpg", draw_grid_features(filtered1, kp1))
-    save_image(output / "12_satsuei_features.jpg",
-               draw_grid_features(best["filtered"], best["keypoints"]))
-    drawn = cv2.drawMatches(
-        warped1, kp1, best["mosaic"], best["keypoints"],
-        best["matches"][:c.draw_matches], None, matchColor=(0, 255, 0),
-        flags=cv2.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS)
-    save_image(output / "13_spatial_matches.jpg", drawn)
-    timings["total_seconds"] = time.perf_counter() - started
-
-    if metrics["source_features"] == 0:
-        reason = "登録画像から特徴点を抽出できませんでした。"
-    elif metrics["with_spatial_candidate"] == 0:
-        reason = "透視変換後の同一座標近傍に撮影側特徴点がありませんでした。"
-    elif success:
-        reason = "座標近傍かつHamming距離閾値以下の対応割合が暫定閾値を超えました。"
-    else:
-        reason = "座標近傍の特徴量一致割合が暫定閾値を超えませんでした。"
-
-    summary = [
-        "床指紋：提案手法（目地検出＋透視変換＋座標近傍照合）",
-        f"登録画像：{path1}",
-        f"撮影画像：{path2}",
-        f"目地指定：登録{detection1['mode']} / 撮影{detection2['mode']}",
-        f"採用した撮影画像の回転：反時計回り{90 * metrics['quarter_turns_ccw']}度",
-        f"登録側B-ORB特徴点数：{len(kp1)}",
-        f"撮影側B-ORB特徴点数：{len(best['keypoints'])}",
-        f"座標近傍に候補がある登録特徴点：{metrics['with_spatial_candidate']}",
-        f"Hamming距離{c.hamming_threshold}以下の1対1対応：{metrics['accepted']}",
-        f"全登録特徴点に対する一致割合：{metrics['fraction_of_source'] * 100:.2f}%",
-        f"近傍候補あり特徴点に対する一致割合：{metrics['fraction_of_candidate'] * 100:.2f}%",
-        f"判定：{'成功' if success else '不成立'}（暫定閾値{c.decision_threshold * 100:g}%）",
-        f"判定理由：{reason}",
-        "※提案手法の判定閾値は未確定。10地点の同地点・異地点データで決定する。",
-        "※BFMatcherとRANSACは使用していない。座標近傍内だけでHamming距離を比較。",
-        f"処理時間：{timings['total_seconds']:.3f}秒",
-        f"保存先：{output}",
-    ]
-    report = {
-        "implementation": "proposed method prototype",
-        "scope": "grout detection + perspective normalization + tile-wise B-ORB + spatial matching",
-        "opencv_version": cv2.__version__, "numpy_version": np.__version__,
-        "python_version": sys.version.split()[0], "config": asdict(c),
-        "registered_image": str(path1), "query_image": str(path2),
-        "registered_sha256": hashlib.sha256(path1.read_bytes()).hexdigest(),
-        "query_sha256": hashlib.sha256(path2.read_bytes()).hexdigest(),
-        "registered_quad": quad1.tolist(), "query_quad": quad2.tolist(),
-        "registered_perspective": perspective1.tolist(),
-        "query_perspective": perspective2.tolist(),
-        "registered_detection": detection1, "query_detection": detection2,
-        "registered_tile_stats": stats1, "query_tile_stats": best["tile_stats"],
-        "orientation_trials": [item["metrics"] for item in orientations],
-        "best_metrics": metrics, "decision_reason": reason, "timings": timings,
-        "assumptions": [
-            "input contains one complete 2x2 tile block and its three grout lines per direction",
-            "automatic grout detection uses Canny + probabilistic Hough segments",
-            "each detected 2x2 block is warped to a square and split into four tiles",
-            "tile borders are excluded before mean-difference filtering and B-ORB",
-            "four 90-degree orientations are tested; the highest spatial-match score is used",
-            "BFMatcher and RANSAC are not used",
-            "the decision threshold is provisional and must be calibrated experimentally",
-        ],
-    }
-    (output / "result.json").write_text(
-        json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
-    (output / "result.txt").write_text("\n".join(summary) + "\n", encoding="utf-8")
-    if verbose:
-        print("\n" + "\n".join(summary), flush=True)
-    return report
-
-
-def make_synthetic_grid(seed: int = 1):
-    rng = np.random.default_rng(seed)
-    size, tile = 900, 360
-    image = np.full((size, size, 3), 180, np.uint8)
-    starts = (90, 450)
-    for row, y0 in enumerate(starts):
-        for col, x0 in enumerate(starts):
-            texture = rng.normal(0, 12, (tile, tile)).astype(np.float32)
-            texture = cv2.GaussianBlur(texture, (3, 3), 0.35)
-            base = np.clip(175 + texture + 3 * (row * 2 + col), 0, 255).astype(np.uint8)
-            image[y0:y0 + tile, x0:x0 + tile] = cv2.cvtColor(base, cv2.COLOR_GRAY2BGR)
-            # 微細な汚れ・傷を模した点と短線。FAST/ORBの動作確認用。
-            for _ in range(90):
-                x = int(rng.integers(x0 + 25, x0 + tile - 25))
-                y = int(rng.integers(y0 + 25, y0 + tile - 25))
-                value = int(rng.integers(90, 245))
-                if rng.random() < 0.7:
-                    cv2.circle(image, (x, y), int(rng.integers(1, 4)),
-                               (value, value, value), -1)
-                else:
-                    dx, dy = int(rng.integers(-10, 11)), int(rng.integers(-10, 11))
-                    cv2.line(image, (x, y), (x + dx, y + dy),
-                             (value, value, value), 1)
-    for position in (88, 448, 808):
-        cv2.line(image, (position, 88), (position, 812), (55, 55, 55), 7)
-        cv2.line(image, (88, position), (812, position), (55, 55, 55), 7)
-    quad = np.array([[88, 88], [808, 88], [808, 808], [88, 808]], np.float32)
-    return image, quad
-
-
-def self_test() -> None:
-    print("提案手法を合成画像で自己テストしています…", flush=True)
-    c = replace(Config(), warp_size=600, features_per_tile=500,
-                fast_threshold=5, spatial_radius_px=18.0,
-                decision_threshold=0.03)
-    image, quad = make_synthetic_grid()
-    destination = np.array([[70, 110], [830, 60], [850, 820], [100, 850]], np.float32)
-    transform = cv2.getPerspectiveTransform(quad, destination)
-    photographed = cv2.warpPerspective(image, transform, (920, 920),
-                                        borderMode=cv2.BORDER_REFLECT_101)
-    photographed = cv2.rotate(photographed, cv2.ROTATE_90_CLOCKWISE)
-    transformed_quad = cv2.perspectiveTransform(quad[None], transform)[0]
-    transformed_quad = np.column_stack((920 - 1 - transformed_quad[:, 1],
-                                        transformed_quad[:, 0])).astype(np.float32)
-    with tempfile.TemporaryDirectory(prefix="floor_proposal_test_") as directory:
-        root = Path(directory)
-        registered, query = root / "登録.jpg", root / "撮影.jpg"
-        save_image(registered, image)
-        save_image(query, photographed)
-        positive = run_pair(registered, query, root / "positive", c,
-                            quad, transformed_quad, verbose=False)
-        assert positive["best_metrics"]["accepted"] > 0, positive["best_metrics"]
-        assert positive["best_metrics"]["success"], positive["best_metrics"]
-        assert (root / "positive" / "13_spatial_matches.jpg").is_file()
-        automatic = run_pair(registered, query, root / "automatic", c,
-                             verbose=False)
-        assert automatic["registered_detection"]["mode"] == "automatic"
-        assert automatic["query_detection"]["mode"] == "automatic"
-        assert automatic["best_metrics"]["accepted"] > 0, automatic["best_metrics"]
-        # 同じ4隅でも別模様なら一致割合が下がることを確認する。
-        different, _ = make_synthetic_grid(seed=999)
-        save_image(query, different)
-        negative = run_pair(registered, query, root / "negative", c, quad, quad, verbose=False)
-        assert (negative["best_metrics"]["fraction_of_source"]
-                < positive["best_metrics"]["fraction_of_source"])
-    print("自己テスト成功：透視変換、4タイル分割、回転探索、座標近傍照合、結果保存。")
-    print("※合成画像の動作確認であり、実際の床に対する精度の保証ではありません。")
+    fast_threshold: int = 5
+    margin_ratio: float = 0.04
+    spatial_radius: float = 18.0
+    hamming: int = 100
+    threshold: float = 0.06
+    trials: int = 20000
+    seed: int = 0
+    detection_max_side: int = 1400
+    max_tiles: int = 12
+    # 透視補正済み画像で、後段の変換が大きく崩れるモデルを除く補完設定。
+    max_residual_corner_shift_ratio: float = 0.20
 
 
 def resolve_path(value: str) -> Path:
-    path = Path(value)
-    return path.resolve() if path.is_absolute() else (BASE_DIR / path).resolve()
+    p = Path(value)
+    return p.resolve() if p.is_absolute() else (BASE_DIR / p).resolve()
+
+
+def check_config(c: Config) -> None:
+    if c.tile_size < 128 or c.features_per_tile < 20 or c.fast_threshold < 1:
+        raise ValueError("tile-sizeは128以上、features-per-tileは20以上、FASTは1以上が必要です。")
+    if not 0 <= c.margin_ratio < 0.2:
+        raise ValueError("tile-marginは0以上0.2未満にしてください。")
+    if c.spatial_radius <= 0 or not 0 <= c.hamming <= 256:
+        raise ValueError("spatial-radiusは正の数、hammingは0～256にしてください。")
+    if not 0 <= c.threshold <= 1 or c.trials < 1 or c.max_tiles < 1:
+        raise ValueError("thresholdは0～1、trialsとmax-tilesは1以上が必要です。")
+
+
+def base_config(c: Config) -> BaseConfig:
+    return replace(BaseConfig(), image_scale=1.0, nfeatures=c.features_per_tile,
+                   fast_threshold=c.fast_threshold, ransac_trials=c.trials,
+                   random_seed=c.seed, validation_hamming=c.hamming,
+                   validation_threshold=c.threshold)
+
+
+def write_json(path: Path, data) -> None:
+    path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def write_csv(path: Path, rows: list[dict]) -> None:
+    if not rows:
+        return
+    with path.open("w", newline="", encoding="utf-8-sig") as stream:
+        writer = csv.DictWriter(stream, fieldnames=list(rows[0]))
+        writer.writeheader()
+        writer.writerows(rows)
+
+
+def order_quad(points: np.ndarray) -> np.ndarray:
+    """凸な四隅を時計回りへ並べる。開始角の違いは4回転照合で吸収。"""
+    p = np.asarray(points, np.float32)
+    if p.shape != (4, 2) or not np.isfinite(p).all():
+        raise ValueError("四隅は有限の座標4点で指定してください。")
+    center = p.mean(axis=0)
+    p = p[np.argsort(np.arctan2(p[:, 1] - center[1], p[:, 0] - center[0]))]
+    p = np.roll(p, -int(np.argmin(p.sum(axis=1))), axis=0)
+    if not cv2.isContourConvex(p.reshape(-1, 1, 2)) or abs(cv2.contourArea(p)) < 100:
+        raise ValueError("四隅が凸な四角形になっていません。四隅の座標を確認してください。")
+    return p
+
+
+def parse_quad(text: str) -> np.ndarray:
+    try:
+        return order_quad(np.asarray([[float(v) for v in pair.split(",")]
+                                      for pair in text.split(";")], np.float32))
+    except (ValueError, TypeError) as exc:
+        raise ValueError("四隅は x,y;x,y;x,y;x,y の形式で指定してください。") from exc
+
+
+def require_inside(quad: np.ndarray, shape) -> None:
+    h, w = shape[:2]
+    if (quad[:, 0].min() < 0 or quad[:, 0].max() > w - 1
+            or quad[:, 1].min() < 0 or quad[:, 1].max() > h - 1):
+        raise ValueError(f"四隅が画像外です。元画像サイズは幅{w}×高さ{h}です。")
+
+
+def normalize_tile(image: np.ndarray, c: Config) -> np.ndarray:
+    square = cv2.resize(image, (c.tile_size, c.tile_size), interpolation=cv2.INTER_AREA)
+    margin = round(c.tile_size * c.margin_ratio)
+    if margin:
+        square = cv2.resize(square[margin:-margin, margin:-margin],
+                            (c.tile_size, c.tile_size), interpolation=cv2.INTER_LINEAR)
+    return square
+
+
+def rectify_tile(image: np.ndarray, quad: np.ndarray, c: Config) -> np.ndarray:
+    quad = order_quad(quad)
+    require_inside(quad, image.shape)
+    s = c.tile_size - 1
+    destination = np.float32([[0, 0], [s, 0], [s, s], [0, s]])
+    matrix = cv2.getPerspectiveTransform(quad, destination)
+    square = cv2.warpPerspective(image, matrix, (c.tile_size, c.tile_size),
+                                 flags=cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT)
+    return normalize_tile(square, c)
+
+
+def extract_features(image: np.ndarray, c: Config) -> dict:
+    filtered = mean_difference_filter(cv2.cvtColor(image, cv2.COLOR_BGR2GRAY),
+                                      BaseConfig.filter_radius)
+    keypoints, descriptors, _ = balanced_orb(filtered, base_config(c))
+    return {"image": image, "filtered": filtered, "keypoints": keypoints,
+            "points": points_from_keypoints(keypoints), "descriptors": descriptors}
+
+
+def build_database(args, c: Config) -> None:
+    """先行DBのタイル画像を利用。先行DBの特徴量・設定は変更しない。"""
+    check_config(c)
+    source = resolve_path(args.db_cache)
+    metadata_path = source / "database.json"
+    sources = []
+    if metadata_path.is_file():
+        metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+        for row in metadata["tiles"]:
+            path = source / Path(row["image_file"].replace("\\", "/"))
+            sources.append((int(row["source_id"]), int(row["tile_index"]), path, None))
+    else:
+        # 元2x2画像からの登録も可能。真上から撮った登録画像を前提とする。
+        for location, path in numbered_images(resolve_path(args.db_dir), "db_"):
+            tiles, _ = split_four_tiles(read_image(path), margin=4, mode="auto")
+            sources.extend((location, i + 1, path, tile) for i, tile in enumerate(tiles))
+    if not sources:
+        raise ValueError("登録タイルがありません。")
+    for _, _, path, tile in sources:
+        if tile is None and not path.is_file():
+            raise FileNotFoundError(f"登録タイル画像がありません：{path}")
+    keys = [(location, index) for location, index, _, _ in sources]
+    if len(set(keys)) != len(keys):
+        raise ValueError("登録タイルの地点番号・タイル番号が重複しています。")
+    output = resolve_path(args.proposal_cache)
+    output.mkdir(parents=True, exist_ok=False)
+    (output / "tiles").mkdir()
+    (output / "features").mkdir()
+    started = time.perf_counter()
+    rows = []
+    for number, (location, index, path, tile) in enumerate(sorted(sources, key=lambda v: v[:2]), 1):
+        name = f"db_{location:02d}_tile_{index}"
+        print(f"登録特徴抽出 [{number}/{len(sources)}] 地点{location}・タイル{index}", flush=True)
+        normalized = normalize_tile(read_image(path) if tile is None else tile, c)
+        prepared = extract_features(normalized, c)
+        save_image(output / "tiles" / f"{name}.png", normalized)
+        np.savez_compressed(output / "features" / f"{name}.npz",
+                            points=prepared["points"], descriptors=prepared["descriptors"])
+        rows.append({"location": location, "tile_index": index, "name": name,
+                     "source_image": str(path), "feature_count": len(prepared["points"]),
+                     "image_file": f"tiles/{name}.png", "feature_file": f"features/{name}.npz"})
+    elapsed = time.perf_counter() - started
+    write_json(output / "database.json", {"format": CACHE_FORMAT, "config": asdict(c),
+               "tiles": rows, "elapsed_seconds": elapsed})
+    write_csv(output / "tile_names.csv", rows)
+    print(f"\n提案手法DB作成完了：{len(set(k[0] for k in keys))}地点 / {len(rows)}タイル")
+    print(f"登録処理時間：{elapsed:.1f}秒\n保存先：{output}", flush=True)
+
+
+def load_database(path: Path, runtime: Config) -> tuple[list[dict], Config]:
+    metadata_path = path / "database.json"
+    if not metadata_path.is_file():
+        raise FileNotFoundError(f"提案手法DBがありません：{metadata_path}\n先に --build-db を実行してください。")
+    metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+    if metadata.get("format") != CACHE_FORMAT:
+        raise ValueError("先行研究用db_cacheではなく、提案手法用teian_db_cacheを指定してください。")
+    stored = Config(**metadata["config"])
+    c = replace(stored, spatial_radius=runtime.spatial_radius, hamming=runtime.hamming,
+                threshold=runtime.threshold, trials=runtime.trials, seed=runtime.seed,
+                max_tiles=runtime.max_tiles)
+    check_config(c)
+    rows = []
+    for row in metadata["tiles"]:
+        with np.load(path / row["feature_file"], allow_pickle=False) as data:
+            points = data["points"].astype(np.float64)
+            desc = data["descriptors"].astype(np.uint8)
+        if points.ndim != 2 or points.shape[1] != 2 or desc.shape != (len(points), 32):
+            raise ValueError(f"登録特徴量の形式が不正です：{row['name']}")
+        rows.append({**row, "points": points, "descriptors": desc,
+                     "image_path": path / row["image_file"]})
+    if not rows:
+        raise ValueError("提案手法DBにタイルがありません。")
+    return rows, c
+
+
+def line_intersection(first, second):
+    point = np.cross(first, second)
+    return None if abs(point[2]) < 1e-8 else point[:2] / point[2]
+
+
+def detect_tile_quads(image: np.ndarray, c: Config):
+    """目地候補2方向の隣接線が囲むセルを列挙。等間隔・2x2を要求しない。"""
+    h, w = image.shape[:2]
+    scale = min(1.0, c.detection_max_side / max(h, w))
+    work = cv2.resize(image, (round(w * scale), round(h * scale)), interpolation=cv2.INTER_AREA)
+    gray = cv2.cvtColor(work, cv2.COLOR_BGR2GRAY)
+    gray = cv2.GaussianBlur(gray, (5, 5), 0)
+    edges = cv2.Canny(gray, 20, 60, L2gradient=True)
+    extent = min(work.shape[:2])
+    segments = cv2.HoughLinesP(edges, 1, np.pi / 360, 55,
+                              minLineLength=max(40, round(extent * .13)),
+                              maxLineGap=max(3, round(extent * .004)))
+    diagnostics = {"mode": "automatic", "scale": scale, "segments": 0,
+                   "warning": "壁・傷を含むタイル候補。検出画像を目視確認すること。"}
+    if segments is None:
+        return [], edges, diagnostics
+    seg = np.asarray(segments).reshape(-1, 4).astype(float)
+    vectors = seg[:, 2:] - seg[:, :2]
+    lengths = np.linalg.norm(vectors, axis=1)
+    angles = np.arctan2(vectors[:, 1], vectors[:, 0])
+    samples = np.float32(np.column_stack((np.cos(2 * angles), np.sin(2 * angles))))
+    if len(seg) < 4:
+        return [], edges, diagnostics
+    cv2.setRNGSeed(0)
+    _, labels, centers = cv2.kmeans(samples, 2, None,
+        (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_MAX_ITER, 60, .0001),
+        8, cv2.KMEANS_PP_CENTERS)
+    direction = .5 * np.arctan2(centers[:, 1], centers[:, 0])
+    if abs(math.sin(float(direction[0] - direction[1]))) < .4:
+        return [], edges, {**diagnostics, "reason": "2方向の線を分離できません。"}
+    center = np.array([work.shape[1] / 2, work.shape[0] / 2])
+    families = []
+    for family in (0, 1):
+        normal = np.array([-math.sin(direction[family]), math.cos(direction[family])])
+        records = []
+        for index in np.flatnonzero(labels.ravel() == family):
+            x1, y1, x2, y2 = seg[index]
+            line = np.array([y1 - y2, x2 - x1, x1 * y2 - x2 * y1])
+            line /= max(np.linalg.norm(line[:2]), 1e-8)
+            if np.dot(line[:2], normal) < 0:
+                line = -line
+            if np.dot(line[:2], normal) < math.cos(math.radians(28)):
+                continue
+            records.append((float(np.dot(line[:2], center) + line[2]), line, lengths[index]))
+        records.sort(key=lambda v: v[0])
+        groups = []
+        for record in records:
+            if not groups or abs(record[0] - np.average(
+                    [r[0] for r in groups[-1]], weights=[r[2] for r in groups[-1]])) > extent * .012:
+                groups.append([record])
+            else:
+                groups[-1].append(record)
+        merged = []
+        for group in groups:
+            line = np.average([r[1] for r in group], axis=0, weights=[r[2] for r in group])
+            line /= np.linalg.norm(line[:2])
+            merged.append(line)
+        families.append(merged)
+    # 境界が実際のエッジに沿っているか検査。画像外の辺を補わない。
+    distances = cv2.distanceTransform((edges == 0).astype(np.uint8), cv2.DIST_L2, 3)
+    candidates = []
+    for a, b in zip(families[0], families[0][1:]):
+        for d, e in zip(families[1], families[1][1:]):
+            corners = [line_intersection(x, y) for x, y in ((a, d), (b, d), (b, e), (a, e))]
+            if any(p is None for p in corners):
+                continue
+            try:
+                quad = order_quad(np.float32(corners))
+                require_inside(quad, work.shape)
+            except ValueError:
+                continue
+            sides = np.linalg.norm(np.roll(quad, -1, axis=0) - quad, axis=1)
+            area = abs(cv2.contourArea(quad))
+            if sides.min() < extent * .075 or sides.max() / sides.min() > 6:
+                continue
+            if not .005 * work.shape[0] * work.shape[1] <= area <= .55 * work.shape[0] * work.shape[1]:
+                continue
+            support = []
+            for p, q in zip(quad, np.roll(quad, -1, axis=0)):
+                t = np.linspace(.08, .92, 60)
+                xy = np.rint(p[None] * (1 - t[:, None]) + q[None] * t[:, None]).astype(int)
+                support.append(float(np.mean(distances[xy[:, 1], xy[:, 0]] < 5)))
+            if min(support) < .45:
+                continue
+            candidates.append((float(np.mean(support)), area, quad / scale))
+    candidates.sort(key=lambda v: (v[0], v[1]), reverse=True)
+    accepted = []
+    for support, area, quad in candidates:
+        duplicate = False
+        for other in accepted:
+            overlap, _ = cv2.intersectConvexConvex(quad.astype(np.float32), other)
+            if overlap / max(abs(cv2.contourArea(quad)) + abs(cv2.contourArea(other)) - overlap, 1) > .8:
+                duplicate = True
+                break
+        if not duplicate:
+            accepted.append(quad.astype(np.float32))
+        if len(accepted) >= c.max_tiles:
+            break
+    accepted.sort(key=lambda q: (float(q.mean(axis=0)[1]), float(q.mean(axis=0)[0])))
+    diagnostics.update(segments=len(seg), lines_per_direction=[len(f) for f in families],
+                       candidate_count=len(accepted), max_tiles=c.max_tiles)
+    return accepted, edges, diagnostics
+
+
+def prepare_query(image: np.ndarray, output: Path, c: Config, texts: list[str]):
+    if texts:
+        quads = [parse_quad(text) for text in texts]
+        for quad in quads:
+            require_inside(quad, image.shape)
+        edges, detection = None, {"mode": "manual", "candidate_count": len(quads)}
+    else:
+        quads, edges, detection = detect_tile_quads(image, c)
+    output.mkdir(parents=True, exist_ok=False)
+    (output / "query_tiles").mkdir()
+    overlay = image.copy()
+    for index, quad in enumerate(quads, 1):
+        cv2.polylines(overlay, [np.rint(quad).astype(np.int32)], True, (0, 220, 0), 4)
+        center = np.rint(quad.mean(axis=0)).astype(int)
+        cv2.putText(overlay, f"tile {index}", tuple(center), cv2.FONT_HERSHEY_SIMPLEX,
+                    max(.6, max(image.shape[:2]) / 1800), (0, 0, 255), 3)
+        save_image(output / "query_tiles" / f"shoot_tile_{index}.png", rectify_tile(image, quad, c))
+    save_image(output / "query_detection.jpg", overlay)
+    if edges is not None:
+        save_image(output / "query_edges.png", edges)
+    write_json(output / "query_quads.json", {"source_shape_hw": list(image.shape[:2]),
+               "quads": [q.tolist() for q in quads], "detection": detection})
+    return quads
+
+
+def rotate_features(prepared: dict, turns: int, size: int) -> dict:
+    """ORB記述子を再利用し、正方形上の座標を90度単位で回転する。"""
+    p = prepared["points"].copy()
+    for _ in range(turns):
+        p = np.column_stack((p[:, 1], size - 1 - p[:, 0]))
+    return {**prepared, "points": p, "image": np.rot90(prepared["image"], turns).copy()}
+
+
+def spatial_matches(registered: dict, query: dict, c: Config):
+    """座標近傍で最もHamming距離の小さい候補を選び、重複を除いて1対1に。"""
+    radius = c.spatial_radius
+    bins = {}
+    for index, point in enumerate(query["points"]):
+        cell = tuple(np.floor(point / radius).astype(int))
+        bins.setdefault(cell, []).append(index)
+    proposals = []
+    for index, point in enumerate(registered["points"]):
+        x, y = np.floor(point / radius).astype(int)
+        ids = [i for dy in (-1, 0, 1) for dx in (-1, 0, 1)
+               for i in bins.get((x + dx, y + dy), [])]
+        if not ids:
+            continue
+        ids = np.asarray(ids, np.int64)
+        ids = ids[np.square(query["points"][ids] - point).sum(axis=1) <= radius ** 2]
+        if not len(ids):
+            continue
+        distances = BIT_COUNTS[np.bitwise_xor(query["descriptors"][ids],
+                                               registered["descriptors"][index])].sum(axis=1)
+        best = int(np.argmin(distances))
+        if distances[best] <= c.hamming:
+            proposals.append((int(distances[best]), index, int(ids[best])))
+    used, matches = set(), []
+    for distance, source, target in sorted(proposals):
+        if target not in used:
+            used.add(target)
+            matches.append(cv2.DMatch(source, target, float(distance)))
+    return matches
+
+
+def compare_tiles(registered: dict, query: dict, c: Config) -> dict:
+    matches = spatial_matches(registered, query, c)
+    src = np.asarray([registered["points"][m.queryIdx] for m in matches], np.float64).reshape(-1, 2)
+    dst = np.asarray([query["points"][m.trainIdx] for m in matches], np.float64).reshape(-1, 2)
+    _, mask, info = paper_ransac(src, dst, base_config(c))
+    homography = homography_from_consensus(src[mask], dst[mask])
+    sane = homography is not None
+    if sane:
+        s = c.tile_size - 1
+        corners = np.float32([[0, 0], [s, 0], [s, s], [0, s]])
+        projected = cv2.perspectiveTransform(corners[None], homography)[0]
+        sane = bool(np.isfinite(projected).all()
+                    and np.linalg.norm(projected - corners, axis=1).max()
+                    <= c.max_residual_corner_shift_ratio * c.tile_size)
+    validation = validate_alignment(registered["points"], registered["descriptors"],
+        query["points"], query["descriptors"], homography if sane else None,
+        (c.tile_size, c.tile_size), base_config(c))
+    return {"score": validation["fraction"], "success": bool(validation["success"]),
+            "candidate_matches": len(matches), "inliers": int(mask.sum()),
+            "inlier_fraction": int(mask.sum()) / len(matches) if matches else 0.0,
+            "ransac_trials": info["trials"], "ransac_full_checks": info["full_checks"],
+            "homography_sane": sane, "validation": validation,
+            "matches": matches, "mask": mask, "homography": homography}
+
+
+def draw_pair(output: Path, registered: dict, query: dict, report: dict) -> None:
+    source = read_image(registered["image_path"])
+    first = [cv2.KeyPoint(float(p[0]), float(p[1]), 7.) for p in registered["points"]]
+    second = [cv2.KeyPoint(float(p[0]), float(p[1]), 7.) for p in query["points"]]
+    pairs = report["matches"][:300]
+    retained = [m for m, keep in zip(pairs, report["mask"][:len(pairs)]) if keep]
+    flags = cv2.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS
+    save_image(output / "best_db_tile.png", source)
+    save_image(output / "best_query_tile.png", query["image"])
+    save_image(output / "matches_before_ransac.jpg", cv2.drawMatches(
+        source, first, query["image"], second, pairs, None,
+        matchColor=(0, 200, 255), flags=flags))
+    save_image(output / "matches_after_ransac.jpg", cv2.drawMatches(
+        source, first, query["image"], second, retained, None,
+        matchColor=(0, 255, 0), flags=flags))
+
+
+def identify(args, runtime: Config) -> dict:
+    photo = resolve_path(args.satsuei)
+    if not photo.is_file():
+        raise FileNotFoundError(f"撮影画像がありません：{photo}")
+    started = time.perf_counter()
+    db, c = load_database(resolve_path(args.proposal_cache), runtime)
+    loaded_seconds = time.perf_counter() - started
+    output = resolve_path(args.output) if args.output else BASE_DIR / "kekka" / (
+        "teian_identify_" + datetime.now().strftime("%Y%m%d_%H%M%S_%f"))
+    clock = time.perf_counter()
+    texts = ([args.satsuei_points] if args.satsuei_points else []) + args.quad
+    image = read_image(photo)
+    quads = prepare_query(image, output, c, texts)
+    detection_seconds = time.perf_counter() - clock
+    if not quads:
+        result = {"prediction": "no_tile_detected", "query_image": str(photo),
+                  "reason": "目地から完全なタイル候補を検出できませんでした。照合は実行していません。"}
+        write_json(output / "result.json", result)
+        (output / "result.txt").write_text(result["reason"] + "\n", encoding="utf-8")
+        print(result["reason"])
+        print(f"確認画像：{output / 'query_detection.jpg'}\n--satsuei-pointsで1タイルの四隅を指定できます。")
+        return result
+    clock = time.perf_counter()
+    queries = []
+    for index in range(1, len(quads) + 1):
+        print(f"撮影特徴抽出 [{index}/{len(quads)}] shoot_tile_{index}", flush=True)
+        prepared = extract_features(read_image(output / "query_tiles" / f"shoot_tile_{index}.png"), c)
+        queries.append([rotate_features(prepared, turns, c.tile_size) for turns in range(4)])
+    extraction_seconds = time.perf_counter() - clock
+    clock = time.perf_counter()
+    rows, best_by_location = [], {}
+    best_overall = None
+    total = len(queries) * len(db)
+    print(f"撮影候補{len(queries)}タイル × 登録{len(db)}タイル = {total}組（各組で4回転を確認）", flush=True)
+    for index, rotations in enumerate(queries, 1):
+        for db_index, registered in enumerate(db, 1):
+            selected = None
+            for turns, query in enumerate(rotations):
+                report = compare_tiles(registered, query, c)
+                if selected is None or (report["score"], report["inliers"]) > (selected[0]["score"], selected[0]["inliers"]):
+                    selected = (report, turns, query)
+            report, turns, query = selected
+            row = {"query_tile": index, "db_location": registered["location"],
+                   "db_tile": registered["tile_index"], "db_name": registered["name"],
+                   "rotation_ccw": turns * 90, "score_percent": report["score"] * 100,
+                   "success": int(report["success"]), "candidate_matches": report["candidate_matches"],
+                   "inliers": report["inliers"], "inlier_percent": report["inlier_fraction"] * 100,
+                   "ransac_trials": report["ransac_trials"],
+                   "homography_sane": int(report["homography_sane"])}
+            rows.append(row)
+            location = registered["location"]
+            rank = (report["score"], report["inliers"])
+            if location not in best_by_location or rank > best_by_location[location]["rank"]:
+                best_by_location[location] = {"location": location, "rank": rank, "row": row}
+            if best_overall is None or rank > best_overall["rank"]:
+                best_overall = {"rank": rank, "registered": registered, "query": query,
+                                "report": report, "row": row}
+            count = (index - 1) * len(db) + db_index
+            if count == 1 or count == total or count % 20 == 0:
+                print(f"照合 [{count}/{total}]", flush=True)
+    matching_seconds = time.perf_counter() - clock
+    ranked = sorted(best_by_location.values(), key=lambda v: (-v["rank"][0], -v["rank"][1], v["location"]))
+    first = ranked[0]
+    score = first["rank"][0]
+    predicted = first["location"] if score > c.threshold else None
+    second = ranked[1] if len(ranked) > 1 else None
+    write_csv(output / "all_tile_results.csv", rows)
+    location_rows = [{"location": v["location"], "score_percent": v["rank"][0] * 100,
+                      "query_tile": v["row"]["query_tile"], "db_tile": v["row"]["db_tile"]} for v in ranked]
+    write_csv(output / "location_scores.csv", location_rows)
+    draw_pair(output, best_overall["registered"], best_overall["query"], best_overall["report"])
+    elapsed = time.perf_counter() - started
+    result = {"method": "single-tile perspective normalization + spatial Hamming + paper RANSAC + validation",
+              "query_image": str(photo), "query_shape_hw": list(image.shape[:2]),
+              "query_tiles": len(quads), "database_tiles": len(db), "tile_pair_comparisons": total,
+              "orientation_comparisons": total * 4, "prediction": f"db_{predicted:02d}" if predicted is not None else "no_match",
+              "location_score_percent": score * 100, "best_pair": first["row"],
+              "location_scores": location_rows, "config": asdict(c),
+              "expected_db": args.expected_db,
+              "correct_identification": (predicted == args.expected_db) if args.expected_db is not None else None,
+              "timings": {"db_load_seconds": loaded_seconds, "detection_rectify_seconds": detection_seconds,
+                          "query_feature_seconds": extraction_seconds, "matching_seconds": matching_seconds,
+                          "elapsed_seconds": elapsed},
+              "notes": ["location score is maximum pair score; provisional decision rule",
+                        "automatic quadrilaterals are candidates, not guaranteed tile detections",
+                        "RANSAC is used for every orientation; BFMatcher is not used",
+                        "no evaluation labels are used to choose the result"]}
+    write_json(output / "result.json", result)
+    lines = ["床指紋：提案手法の地点識別（1タイル単位）", f"撮影画像：{photo}",
+             f"撮影タイル候補：{len(quads)}枚 / 登録DB：{len(ranked)}地点・{len(db)}タイル",
+             f"総タイル照合数：{total}組 / 回転を含む照合数：{total * 4}",
+             f"推定地点：{result['prediction']}", f"地点得点：{score * 100:.2f}%（地点内の最高タイル得点）"]
+    if predicted is not None:
+        lines.append(f"採用対応：撮影タイル{first['row']['query_tile']} → 地点{predicted}・タイル{first['row']['db_tile']}")
+    if second is not None:
+        lines.append(f"2位：db_{second['location']:02d} ({second['rank'][0] * 100:.2f}%)")
+    if args.expected_db is not None:
+        lines.append(f"正解地点：db_{args.expected_db:02d} / 識別：{'正解' if predicted == args.expected_db else '不正解'}")
+    lines.extend([f"目地検出・補正：{detection_seconds:.1f}秒", f"撮影特徴抽出：{extraction_seconds:.1f}秒",
+                  f"照合時間：{matching_seconds:.1f}秒 / 合計：{elapsed:.1f}秒",
+                  "※透視変換・座標近傍照合・RANSACを使用。BFMatcherは使用していません。",
+                  f"※判定基準{c.threshold * 100:g}%と最高得点による地点判定は暫定です。",
+                  f"保存先：{output}"])
+    (output / "result.txt").write_text("\n".join(lines) + "\n", encoding="utf-8")
+    print("\n" + "\n".join(lines), flush=True)
+    return result
+
+
+def self_test() -> None:
+    """同一タイルの台形撮影・回転・別模様・自動検出の動作を検証。"""
+    c = Config(tile_size=256, features_per_tile=450, fast_threshold=5)
+    rng = np.random.default_rng(9)
+    texture = cv2.GaussianBlur(rng.integers(30, 220, (256, 256), np.uint8), (3, 3), .6)
+    tile = cv2.cvtColor(texture, cv2.COLOR_GRAY2BGR)
+    p = np.float32([[0, 0], [255, 0], [255, 255], [0, 255]])
+    q = np.float32([[90, 50], [430, 85], [390, 430], [60, 380]])
+    photo = cv2.warpPerspective(tile, cv2.getPerspectiveTransform(p, q), (500, 500))
+    registered = extract_features(normalize_tile(tile, c), c)
+    query = extract_features(rectify_tile(photo, q, c), c)
+    positive = compare_tiles(registered, query, c)
+    assert positive["success"] and positive["inliers"] >= BaseConfig.min_consensus, positive
+    different = cv2.cvtColor(cv2.GaussianBlur(
+        rng.integers(30, 220, (256, 256), np.uint8), (3, 3), .6), cv2.COLOR_GRAY2BGR)
+    negative = compare_tiles(registered, extract_features(normalize_tile(different, c), c), c)
+    assert not negative["success"], negative
+    rotated = extract_features(np.rot90(normalize_tile(tile, c)).copy(), c)
+    scores = [compare_tiles(registered, rotate_features(rotated, n, c.tile_size), c)["score"] for n in range(4)]
+    assert max(scores) > c.threshold
+    empty = {"points": np.empty((0, 2)), "descriptors": np.empty((0, 32), np.uint8)}
+    assert compare_tiles(empty, empty, c)["score"] == 0
+    blank = np.full((600, 600, 3), 180, np.uint8)
+    assert not detect_tile_quads(blank, c)[0]
+    for x in (80, 300, 520):
+        cv2.line(blank, (x, 20), (x, 580), (30, 30, 30), 3)
+        cv2.line(blank, (20, x), (580, x), (30, 30, 30), 3)
+    detected, _, _ = detect_tile_quads(blank, c)
+    assert len(detected) == 4, len(detected)
+    try:
+        require_inside(np.float32([[-1, 0], [40, 0], [40, 40], [0, 40]]), tile.shape)
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("画像外の四隅を受け付けました。")
+    # 旧DBキャッシュの画像参照から提案DBを作成し、保存・読込・全DB識別も検証。
+    with tempfile.TemporaryDirectory(prefix="teian_single_tile_test_") as directory:
+        root = Path(directory)
+        old = root / "先行DB"
+        (old / "db_tiles").mkdir(parents=True)
+        save_image(old / "db_tiles" / "db_011.png", tile)
+        save_image(old / "db_tiles" / "db_021.png", different)
+        write_json(old / "database.json", {"tiles": [
+            {"source_id": 1, "tile_index": 1, "image_file": "db_tiles\\db_011.png"},
+            {"source_id": 2, "tile_index": 1, "image_file": "db_tiles/db_021.png"}]})
+        cache = root / "提案DB"
+        build_args = argparse.Namespace(db_cache=str(old), db_dir=str(root / "unused"),
+                                        proposal_cache=str(cache))
+        build_database(build_args, c)
+        loaded, stored = load_database(cache, c)
+        assert len(loaded) == 2 and loaded[0]["location"] == 1
+        assert np.array_equal(loaded[0]["descriptors"], registered["descriptors"])
+        shot = root / "撮影.png"
+        save_image(shot, photo)
+        point_string = ";".join(f"{x},{y}" for x, y in q)
+        runtime = argparse.Namespace(satsuei=str(shot), proposal_cache=str(cache),
+            output=str(root / "結果"), satsuei_points=point_string, quad=[], expected_db=1)
+        result = identify(runtime, c)
+        assert result["prediction"] == "db_01", result
+        assert result["orientation_comparisons"] == 8
+        assert (root / "結果" / "matches_after_ransac.jpg").is_file()
+        # タイルなしと照合不成立を区別し、検出診断を保存する。
+        save_image(shot, np.full((500, 500, 3), 180, np.uint8))
+        runtime.output = str(root / "目地なし")
+        runtime.satsuei_points = None
+        missing = identify(runtime, c)
+        assert missing["prediction"] == "no_tile_detected"
+        assert (root / "目地なし" / "query_detection.jpg").is_file()
+    print("自己テスト成功：台形補正、RANSAC、回転、別模様、画像外、DB保存・識別・検出診断。")
+    print("※合成データによる動作確認です。実際の床での識別性能は別途検証してください。")
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(
-        description="床指紋の提案手法：目地検出＋透視変換＋座標近傍照合")
-    parser.add_argument("--touroku", default="gazou/touroku.jpg", help="登録画像のパス")
-    parser.add_argument("--satsuei", default="gazou/satsuei_real.jpg", help="撮影画像のパス")
-    parser.add_argument("--output", default=None, help="新規の結果フォルダ（既存は不可）")
-    parser.add_argument("--touroku-points", default=None,
-                        help="登録画像の4隅：x,y;x,y;x,y;x,y")
-    parser.add_argument("--satsuei-points", default=None,
-                        help="撮影画像の4隅：x,y;x,y;x,y;x,y")
-    parser.add_argument("--warp-size", type=int, default=Config.warp_size)
-    parser.add_argument("--features-per-tile", type=int, default=Config.features_per_tile)
-    parser.add_argument("--fast-threshold", type=int, default=Config.fast_threshold)
-    parser.add_argument("--spatial-radius", type=float, default=Config.spatial_radius_px)
-    parser.add_argument("--hamming", type=int, default=Config.hamming_threshold)
-    parser.add_argument("--threshold", type=float, default=Config.decision_threshold,
-                        help="暫定判定閾値。実験後に校正する")
-    parser.add_argument("--self-test", action="store_true")
+    parser = argparse.ArgumentParser(description="床指紋：1タイル透視補正＋座標近傍照合＋RANSAC")
+    mode = parser.add_mutually_exclusive_group(required=True)
+    mode.add_argument("--build-db", action="store_true", help="提案手法専用DBを事前作成")
+    mode.add_argument("--identify", action="store_true", help="撮影写真1枚を全登録タイルと照合")
+    mode.add_argument("--detect-only", action="store_true", help="タイル候補検出・補正画像のみ保存")
+    mode.add_argument("--self-test", action="store_true", help="合成データで動作確認")
+    parser.add_argument("--db-cache", default="gazou/db_cache", help="先行研究DBの分割済み画像を読み込む")
+    parser.add_argument("--db-dir", default="gazou/db", help="先行DBがない場合の真上2x2登録画像")
+    parser.add_argument("--proposal-cache", default="gazou/teian_db_cache", help="提案手法用DBの保存先・読込先")
+    parser.add_argument("--satsuei", help="撮影画像1枚のパス")
+    parser.add_argument("--satsuei-points", help="1タイルの四隅 x,y;x,y;x,y;x,y。元画像座標")
+    parser.add_argument("--quad", action="append", default=[], help="追加の1タイル四隅。複数回指定可能")
+    parser.add_argument("--output", help="新規の結果フォルダ。省略すると日時で作成")
+    parser.add_argument("--tile-size", type=int, default=512)
+    parser.add_argument("--features-per-tile", type=int, default=2500)
+    parser.add_argument("--fast-threshold", type=int, default=5)
+    parser.add_argument("--tile-margin", type=float, default=.04)
+    parser.add_argument("--spatial-radius", type=float, default=18)
+    parser.add_argument("--hamming", type=int, default=100)
+    parser.add_argument("--threshold", type=float, default=.06, help="暫定判定基準（割合）")
+    parser.add_argument("--trials", type=int, default=20000)
+    parser.add_argument("--seed", type=int, default=0)
+    parser.add_argument("--max-tiles", type=int, default=12, help="自動検出の候補上限")
+    parser.add_argument("--expected-db", type=int, help="実験用の正解地点。推定には使用しない")
     args = parser.parse_args()
+    c = Config(tile_size=args.tile_size, features_per_tile=args.features_per_tile,
+               fast_threshold=args.fast_threshold, margin_ratio=args.tile_margin,
+               spatial_radius=args.spatial_radius, hamming=args.hamming,
+               threshold=args.threshold, trials=args.trials, seed=args.seed, max_tiles=args.max_tiles)
+    check_config(c)
     if args.self_test:
         self_test()
-        return
-    c = replace(Config(), warp_size=args.warp_size,
-                features_per_tile=args.features_per_tile,
-                fast_threshold=args.fast_threshold,
-                spatial_radius_px=args.spatial_radius,
-                hamming_threshold=args.hamming,
-                decision_threshold=args.threshold)
-    registered, query = resolve_path(args.touroku), resolve_path(args.satsuei)
-    for path in (registered, query):
-        if not path.is_file():
-            raise FileNotFoundError(f"画像がありません：{path}")
-    stamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
-    output = (resolve_path(args.output) if args.output else
-              BASE_DIR / "kekka" / f"step4_teian_{stamp}")
-    run_pair(registered, query, output, c,
-             parse_points(args.touroku_points), parse_points(args.satsuei_points))
+    elif args.build_db:
+        build_database(args, c)
+    elif not args.satsuei:
+        raise ValueError("--satsueiに撮影画像1枚を指定してください。")
+    elif args.identify:
+        identify(args, c)
+    else:
+        output = resolve_path(args.output) if args.output else BASE_DIR / "kekka" / (
+            "teian_detection_" + datetime.now().strftime("%Y%m%d_%H%M%S_%f"))
+        texts = ([args.satsuei_points] if args.satsuei_points else []) + args.quad
+        quads = prepare_query(read_image(resolve_path(args.satsuei)), output, c, texts)
+        print(f"タイル候補：{len(quads)}枚\n確認画像：{output / 'query_detection.jpg'}", flush=True)
 
 
 if __name__ == "__main__":
     try:
         main()
-    except (FileNotFoundError, FileExistsError, ValueError, RuntimeError, cv2.error) as exc:
+    except (OSError, ValueError, RuntimeError, KeyError, cv2.error) as exc:
         print(f"\n実行できませんでした：{exc}", file=sys.stderr)
         raise SystemExit(1)
