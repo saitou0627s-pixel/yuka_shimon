@@ -8,7 +8,16 @@ step3_senko_saigen.py / step4_teian.py と同じ場所へ、この名前で保�
 目地特徴点の使用率を比較：
   python step4_teian_grout.py --sweep --satsuei gazou/satsuei/diagonal_angle_1.jpg
     --satsuei-points "880,652;1205,879;857,1145;554,861"
-    --points-size "1536,2048" --expected-db 1 --expected-tile 1
+    --points-size "1536,2048"
+正解が分かっていて採点もする場合だけ --expected-floor 5 --expected-db 1 --expected-tile 1。
+
+【複数階の照合】
+--sweepではDEFAULT_FLOOR_DATABASESに登録した全階を読み込み、階・地点・タイルを推定する。
+撮影画像名や正解階を候補の絞り込みには使わない。既存キャッシュは読み取り専用。
+別構成は --floor-db "3=gazou/三階のキャッシュ" --floor-db "5=gazou/五階のキャッシュ"。
+単一キャッシュの旧方式を明示的に使う場合のみ --grout-cache PATH を指定する。
+--expected-floor / --expected-db / --expected-tile は採点専用で、推定には使わない。
+--check-caches は登録済み全階のDBを読み込み、階・地点数・タイル数を表示するだけ。
 
 【提案の中心】
 目地の四隅から透視補正し、四辺の周囲に幅を持つ目地領域を作る。
@@ -76,6 +85,14 @@ except ImportError as exc:
 
 BASE_DIR = Path(__file__).resolve().parent
 FORMAT = "floor-grout-fixed-feature-pool-v1"
+
+# 登録DBの一覧。撮影画像の正解階ではない。通常の--sweepは常にこの全件を比較する。
+# 新しい階を追加するときは、確認済みキャッシュを1行追加する（元DBの改名・結合は不要）。
+DEFAULT_FLOOR_DATABASES = (
+    (3, "gazou/grout_cache_floor3_20261110_161058"),
+    (4, "gazou/grout_cache_floor4_20261110_164756"),
+    (5, "gazou/grout_cache_floor5_20261107_171614"),
+)
 
 
 @dataclass(frozen=True)
@@ -349,6 +366,107 @@ def load_database(path: Path, runtime: Config):
     return pools, c
 
 
+def database_specs(args):
+    """登録側の階とキャッシュの対応だけを解決。撮影画像や正解ラベルは参照しない。"""
+    explicit = getattr(args, "floor_db", None)
+    single = getattr(args, "grout_cache", None)
+    if explicit and single:
+        raise ValueError("floor-dbとgrout-cacheは同時に指定できません。")
+    if explicit:
+        specs = []
+        for value in explicit:
+            floor_text, separator, path_text = value.partition("=")
+            if not separator or not re.fullmatch(r"-?[0-9]+", floor_text.strip()) or not path_text.strip():
+                raise ValueError('floor-dbは "3=gazou/キャッシュ名" の形式で指定してください。')
+            specs.append((int(floor_text), path_text.strip()))
+    elif single:
+        # 旧方式は明示した1キャッシュだけ。名前から階を特定できなければ「階不明」。
+        match = re.search(r"(?:^|_)floor(-?[0-9]+)(?:_|$)", resolve_path(single).name)
+        specs = [(int(match[1]) if match else None, single)]
+    else:
+        specs = list(DEFAULT_FLOOR_DATABASES)
+    if not specs:
+        raise ValueError("登録DBが未設定です。DEFAULT_FLOOR_DATABASESまたはfloor-dbを指定してください。")
+    resolved, floors, paths = [], set(), set()
+    for floor, value in specs:
+        path = resolve_path(str(value))
+        if floor in floors:
+            raise ValueError(f"同じ階のDBが重複しています：{floor}階")
+        if path in paths:
+            raise ValueError(f"同じキャッシュを複数の階として指定できません：{path}")
+        floors.add(floor)
+        paths.add(path)
+        resolved.append((floor, path))
+    return sorted(resolved, key=lambda pair: (pair[0] is not None, pair[0] or 0))
+
+
+def location_key(pool):
+    return pool.get("floor"), pool["location"]
+
+
+def location_name(floor, location):
+    return f"db_{location:02d}" if floor is None else f"floor_{floor}_db_{location:02d}"
+
+
+def location_text(floor, location, tile=None):
+    prefix = "階不明" if floor is None else f"{floor}階"
+    text = f"{prefix}・地点{location}"
+    return text if tile is None else f"{text}・タイル{tile}"
+
+
+def load_registered_databases(args, runtime: Config):
+    """全登録キャッシュを読み、階付きの一意IDをメモリ上で付ける。元DBには書き込まない。"""
+    combined, sources, configuration, identities = [], [], None, set()
+    for floor, path in database_specs(args):
+        pools, config = load_database(path, runtime)
+        check_config(config)
+        if configuration is None:
+            configuration = config
+        elif asdict(configuration) != asdict(config):
+            differences = [key for key, value in asdict(configuration).items()
+                           if value != asdict(config)[key]]
+            raise ValueError(f"階ごとのDB設定が異なります（{', '.join(differences)}）：{path}")
+        for pool in pools:
+            key = floor, pool["location"], pool["tile_index"]
+            if key in identities:
+                raise ValueError(f"階・地点・タイルが重複しています：{key}")
+            identities.add(key)
+            if pool.get("floor") is not None and pool["floor"] != floor:
+                raise ValueError(f"登録した階とキャッシュ内の階が一致しません：{path}")
+            if not pool["image_path"].is_file():
+                raise FileNotFoundError(f"登録タイル画像がありません：{pool['image_path']}")
+            original_name = pool["name"]
+            combined.append({**pool, "floor": floor, "local_name": original_name,
+                             "name": original_name if floor is None else f"floor_{floor}_{original_name}",
+                             "cache_path": str(path)})
+        source = {"floor": floor, "cache_path": str(path),
+                  "database_sha256": hashlib.sha256((path / "database.json").read_bytes()).hexdigest(),
+                  "locations": len({pool['location'] for pool in pools}), "tiles": len(pools)}
+        sources.append(source)
+        label = "階不明（旧方式）" if floor is None else f"{floor}階"
+        print(f"登録DB：{label} / {source['locations']}地点・{len(pools)}タイル / {path}", flush=True)
+    combined.sort(key=lambda pool: (pool.get("floor") is not None, pool.get("floor") or 0,
+                                    pool["location"], pool["tile_index"]))
+    print(f"全登録DB：{len(sources)}階区分・{len(combined)}タイル。全件を照合対象にします。", flush=True)
+    return combined, configuration, sources
+
+
+def expected_location_matches(row, args):
+    expected_db = getattr(args, "expected_db", None)
+    expected_floor = getattr(args, "expected_floor", None)
+    return (expected_db is not None and row["db_location"] == expected_db
+            and (expected_floor is None or row.get("db_floor") == expected_floor))
+
+
+def check_evaluation_labels(args, db_pools):
+    # 階をまたいで同じ地点番号があるため、採点するときだけ階も必要。
+    # この検査で候補の絞り込みや正解に合わせた並べ替えはしない。
+    if (len({pool.get("floor") for pool in db_pools}) > 1
+            and getattr(args, "expected_db", None) is not None
+            and getattr(args, "expected_floor", None) is None):
+        raise ValueError("複数階の採点にはexpected-floorも必要です。採点不要ならexpected-dbも省略してください。")
+
+
 def parse_points_size(text: str | None):
     if text is None:
         return None
@@ -408,7 +526,8 @@ def prepare_queries(args, c: Config, output: Path):
 def public_row(query_index, registered, report, turns, selected, query_selected) -> dict:
     good = report["validation"]["hamming_le_100"]
     pool_count = registered["pool_count"]
-    return {"query_tile": query_index, "db_location": registered["location"],
+    return {"query_tile": query_index, "db_floor": registered.get("floor"),
+            "db_location": registered["location"],
             "db_tile": registered["tile_index"], "db_name": registered["name"],
             "rotation_ccw": turns * 90, "score_percent": report["score"] * 100,
             "fixed_pool_score_percent": good / pool_count * 100 if pool_count else 0.,
@@ -424,6 +543,7 @@ def public_row(query_index, registered, report, turns, selected, query_selected)
 
 
 def run_condition(db_pools, query_pools, keep: float, c: Config, output: Path, args):
+    check_evaluation_labels(args, db_pools)
     output.mkdir(parents=True, exist_ok=False)
     clock = time.perf_counter()
     selected_db = [choose_features(p, keep, c) for p in db_pools]
@@ -431,7 +551,7 @@ def run_condition(db_pools, query_pools, keep: float, c: Config, output: Path, a
     rotations = [[rotate_features(p, turn, c.canvas_size) for turn in range(4)] for p in selected_queries]
     selection_seconds = time.perf_counter() - clock
     clock = time.perf_counter()
-    rows, best, by_location = [], None, {}
+    rows, by_location = [], {}
     for qi, query_rotations in enumerate(rotations, 1):
         for di, registered in enumerate(selected_db):
             selected = None
@@ -443,46 +563,63 @@ def run_condition(db_pools, query_pools, keep: float, c: Config, output: Path, a
             row = public_row(qi, db_pools[di], selected["report"], selected["turns"],
                              registered, selected_queries[qi - 1])
             rows.append(row)
-            location = registered["location"]
+            location = location_key(registered)
             if location not in by_location or selected["rank"] > by_location[location]["rank"]:
-                by_location[location] = {"rank": selected["rank"], "row": row}
-            if best is None or selected["rank"] > best["rank"]:
-                best = {**selected, "registered": registered, "db_pool": db_pools[di], "row": row}
+                by_location[location] = {**selected, "registered": registered,
+                                         "db_pool": db_pools[di], "row": row}
             count = (qi - 1) * len(selected_db) + di + 1
             if count == 1 or count % 20 == 0 or count == len(selected_db) * len(rotations):
                 print(f"  目地使用率{keep:g}%：照合 [{count}/{len(selected_db) * len(rotations)}]", flush=True)
     matching_seconds = time.perf_counter() - clock
-    ranked = sorted(by_location.items(), key=lambda v: (-v[1]["rank"][0], -v[1]["rank"][1], v[0]))
-    top_location, top = ranked[0]
-    predicted = top_location if top["rank"][0] > c.threshold else None
+    ranked = sorted(by_location.items(), key=lambda v: (-v[1]["rank"][0], -v[1]["rank"][1],
+                     v[0][0] is not None, v[0][0] or 0, v[0][1]))
+    (top_floor, top_location), top = ranked[0]
+    best = top
+    matched = top["rank"][0] > c.threshold
+    predicted = (top_floor, top_location) if matched else None
     second_score = ranked[1][1]["rank"][0] * 100 if len(ranked) > 1 else None
     # 正解はここから採点だけに使用。推定・切り出し・点選択には使用しない。
-    other_false = (sum(row["success"] for row in rows if row["db_location"] != args.expected_db)
+    expected_floor = getattr(args, "expected_floor", None)
+    other_false = (sum(row["success"] for row in rows if not expected_location_matches(row, args))
                    if args.expected_db is not None else None)
-    truth_rows = [row for row in rows if row["db_location"] == args.expected_db]
+    truth_rows = [row for row in rows if expected_location_matches(row, args)]
     correct_score = max((row["score_percent"] for row in truth_rows), default=None)
+    correct_location = (int(matched and expected_location_matches(top["row"], args))
+                        if args.expected_db is not None else None)
     feature_rows = []
     for original, selected in zip(db_pools, selected_db):
-        feature_rows.append({"side": "db", "name": original["name"], **pool_stats(original),
+        feature_rows.append({"side": "db", "name": original["name"], "db_floor": original.get("floor"),
+                             "db_location": original["location"], "db_tile": original["tile_index"],
+                             **pool_stats(original),
                              "used_total": selected["selected_total"], "used_grout": selected["selected_grout"],
                              "used_surface": selected["selected_surface"]})
     for qi, (original, selected) in enumerate(zip(query_pools, selected_queries), 1):
-        feature_rows.append({"side": "query", "name": f"query_{qi:02d}", **pool_stats(original),
+        feature_rows.append({"side": "query", "name": f"query_{qi:02d}", "db_floor": None,
+                             "db_location": None, "db_tile": None, **pool_stats(original),
                              "used_total": selected["selected_total"], "used_grout": selected["selected_grout"],
                              "used_surface": selected["selected_surface"]})
     summary = {"grout_keep_percent": keep,
-               "predicted_location": f"db_{predicted:02d}" if predicted is not None else "no_match",
-               "best_candidate_location": f"db_{top_location:02d}",
+                "predicted_location": location_name(*predicted) if matched else "no_match",
+                "predicted_floor": top_floor if matched else None,
+                "predicted_db_location": top_location if matched else None,
+                "predicted_db_tile": top["row"]["db_tile"] if matched else None,
+                "predicted_label": location_text(top_floor, top_location, top["row"]["db_tile"]) if matched else "該当なし",
+                "best_candidate_floor": top_floor,
+                "best_candidate_location": location_name(top_floor, top_location),
                "best_db_tile": top["row"]["db_tile"], "best_query_tile": top["row"]["query_tile"],
                "score_percent": top["row"]["score_percent"],
                "fixed_pool_score_percent": top["row"]["fixed_pool_score_percent"],
                "second_score_percent": second_score,
-               "expected_db": args.expected_db, "expected_tile": args.expected_tile,
-               "correct_identification": int(predicted == args.expected_db) if args.expected_db is not None else None,
-               "correct_tile_identification": (int(predicted == args.expected_db and top["row"]["db_tile"] == args.expected_tile)
+                "expected_floor": expected_floor,
+                "expected_db": args.expected_db, "expected_tile": args.expected_tile,
+                "correct_floor_identification": int(matched and top_floor == expected_floor) if expected_floor is not None else None,
+                "correct_identification": correct_location,
+                "correct_tile_identification": (int(correct_location == 1 and top["row"]["db_tile"] == args.expected_tile)
                                                if args.expected_db is not None and args.expected_tile is not None else None),
                "correct_location_best_score_percent": correct_score,
                "false_matches_other_location_tile_pairs": other_false,
+                "false_matches_other_floor_tile_pairs": (sum(row["success"] for row in rows if row["db_floor"] != expected_floor)
+                                                         if expected_floor is not None else None),
                "db_features_total": sum(p["selected_total"] for p in selected_db),
                "db_grout_features_total": sum(p["selected_grout"] for p in selected_db),
                "query_features_total": sum(p["selected_total"] for p in selected_queries),
@@ -492,21 +629,28 @@ def run_condition(db_pools, query_pools, keep: float, c: Config, output: Path, a
                "selection_seconds": selection_seconds, "matching_seconds": matching_seconds}
     write_csv(output / "all_tile_results.csv", rows)
     write_csv(output / "feature_counts.csv", feature_rows)
-    write_csv(output / "location_scores.csv", [{"location": loc, **data["row"]} for loc, data in ranked])
+    write_csv(output / "location_scores.csv", [{"floor": key[0], "location": key[1], **data["row"]}
+                                               for key, data in ranked])
     draw_pair(output, best["registered"], best["query"], best["report"])
     for qi, pool in enumerate(query_pools, 1):
         save_image(output / f"query_{qi:02d}_features.jpg", draw_selection(pool, keep, c))
     db_image_pool = {**best["db_pool"], "image": read_image(best["db_pool"]["image_path"])}
     save_image(output / "best_db_features.jpg", draw_selection(db_image_pool, keep, c))
     write_json(output / "result.json", {"summary": summary, "best_pair": top["row"], "config": asdict(c)})
-    lines = [f"目地上の特徴点使用率：{keep:g}%", f"推定地点：{summary['predicted_location']}",
+    lines = [f"目地上の特徴点使用率：{keep:g}%", f"推定位置：{summary['predicted_label']}",
              f"選択後の登録特徴点を分母とする一致割合：{summary['score_percent']:.2f}%",
              f"削減前の固定候補点を分母とする一致割合：{summary['fixed_pool_score_percent']:.2f}%",
              f"撮影側使用点数：目地{summary['query_grout_features_total']} / タイル面{summary['query_surface_features_total']}",
              f"照合時間：{matching_seconds:.2f}秒（共有の特徴抽出・画像保存を含まない）"]
     if args.expected_db is not None:
-        lines.append(f"正解地点：db_{args.expected_db:02d} / 識別：{'正解' if summary['correct_identification'] else '不正解'}")
+        truth_floor = expected_floor
+        if truth_floor is None and len({p.get('floor') for p in db_pools}) == 1:
+            truth_floor = db_pools[0].get('floor')
+        lines.append(f"正解地点：{location_text(truth_floor, args.expected_db)} / 識別：{'正解' if summary['correct_identification'] else '不正解'}")
         lines.append(f"異地点タイルとの成功判定数：{other_false}")
+    if expected_floor is not None:
+        lines.append(f"正解階：{expected_floor}階 / 階識別：{'正解' if summary['correct_floor_identification'] else '不正解'}")
+        lines.append(f"異階タイルとの成功判定数：{summary['false_matches_other_floor_tile_pairs']}")
     lines.extend(["透視補正・座標近傍Hamming照合・RANSAC・事後評価を全条件で使用。",
                   "同じ候補点から目地上の点だけ減らし、タイル面の点は固定。削減分の補充なし。",
                   f"判定基準{c.threshold * 100:g}%は暫定。一致割合は識別正解率ではありません。"])
@@ -541,13 +685,19 @@ def japanese_summary(rows: list[dict]) -> list[dict]:
         correct = row["correct_identification"]
         result.append({
             "目地上の特徴点使用率（％）": row["grout_keep_percent"],
+            "推定階": row["predicted_floor"],
+            "推定地点番号": row["predicted_db_location"],
             "推定地点": row["predicted_location"],
+            "推定位置": row["predicted_label"],
+            "階識別の正誤": ("未採点" if row["correct_floor_identification"] is None else
+                             ("正解" if row["correct_floor_identification"] else "不正解")),
             "地点識別の正誤": "未採点" if correct is None else ("正解" if correct else "不正解"),
-            "採用タイル番号": row["best_db_tile"],
+            "採用タイル番号": row["predicted_db_tile"],
             "選択後特徴点を分母とする一致割合（％）": row["score_percent"],
             "固定候補点を分母とする一致割合（％）": row["fixed_pool_score_percent"],
             "正解地点の最高一致割合（％）": row["correct_location_best_score_percent"],
             "異地点タイルとの成功判定数": row["false_matches_other_location_tile_pairs"],
+            "異階タイルとの成功判定数": row["false_matches_other_floor_tile_pairs"],
             "撮影側で使用した目地上の点数": row["query_grout_features_total"],
             "撮影側で使用したタイル面の点数": row["query_surface_features_total"],
             "登録側で使用した目地上の点数（合計）": row["db_grout_features_total"],
@@ -559,7 +709,8 @@ def japanese_summary(rows: list[dict]) -> list[dict]:
 def run_sweep(args, runtime: Config) -> list[dict]:
     rates = parse_rates(args.keep_rates)
     started = time.perf_counter()
-    db_pools, c = load_database(resolve_path(args.grout_cache), runtime)
+    db_pools, c, db_sources = load_registered_databases(args, runtime)
+    check_evaluation_labels(args, db_pools)
     db_load_seconds = time.perf_counter() - started
     clock = time.perf_counter()
     output = resolve_path(args.output) if args.output else BASE_DIR / "kekka" / (
@@ -583,6 +734,8 @@ def run_sweep(args, runtime: Config) -> list[dict]:
     contact_sheet(output, rates, query_pools, c)
     elapsed = time.perf_counter() - started
     write_json(output / "experiment.json", {"config": asdict(c), "rates": rates,
+        "database_sources": db_sources, "registered_tile_count": len(db_pools),
+        "search_scope": "all_registered_tiles_across_all_configured_floors; no query-floor filtering",
         "source_image": str(resolve_path(args.satsuei)), "detection": detection,
         "source_sha256": hashlib.sha256(resolve_path(args.satsuei).read_bytes()).hexdigest(),
         "opencv_version": cv2.__version__, "numpy_version": np.__version__,
@@ -591,13 +744,14 @@ def run_sweep(args, runtime: Config) -> list[dict]:
         "query_preprocess_seconds_shared": query_preprocess_seconds,
         "elapsed_seconds_total": elapsed, "conditions": results, "warnings": warnings,
         "selection_definition": "grout center within fixed-width band; nested subset, surface fixed, no refill",
-        "important": "manual corners are a controlled experiment; automatic grout detection is not validated"})
+        "important": "coordinates supplied via CLI may be manual or from a separate detector; inspect its diagnostics"})
     lines = ["床指紋：目地上特徴点の使用率比較", f"撮影画像：{args.satsuei}",
+             f"照合対象：登録済み{len(db_sources)}階区分・{len(db_pools)}タイル（全件比較）",
              f"四隅指定：{detection['mode']}", f"目地領域：四辺から両側{c.grout_half_width}px",
              f"共有のDB読込：{db_load_seconds:.2f}秒 / 撮影補正・候補抽出・診断保存：{query_preprocess_seconds:.2f}秒",
-             "使用率 / 推定地点 / 選択点分母の一致割合 / 固定点分母の一致割合 / 撮影目地点数 / 照合秒"]
+             "使用率 / 推定位置（階・地点・タイル） / 選択点分母の一致割合 / 固定点分母の一致割合 / 撮影目地点数 / 照合秒"]
     for row in results:
-        lines.append(f"{row['grout_keep_percent']:g}% / {row['predicted_location']} / {row['score_percent']:.2f}% / "
+        lines.append(f"{row['grout_keep_percent']:g}% / {row['predicted_label']} / {row['score_percent']:.2f}% / "
                      f"{row['fixed_pool_score_percent']:.2f}% / {row['query_grout_features_total']}点 / {row['matching_seconds']:.2f}秒")
     lines.extend(warnings)
     lines.extend(["図の色：緑=使用するタイル面特徴点、橙=使用する目地特徴点、灰=除いた目地特徴点。",
@@ -665,7 +819,66 @@ def self_test() -> None:
         assert first["predicted_location"] == second["predicted_location"]
         assert first["score_percent"] == second["score_percent"] and second["correct_identification"] == 0
         assert (root / "使用100" / "matches_after_ransac.jpg").is_file()
+        # 同じ地点・タイル番号を持つ2階分のキャッシュ。複製は自己テストの一時領域だけ。
+        import shutil
+        other_cache = root / "別階DB"
+        shutil.copytree(cache, other_cache)
+        for feature in (other_cache / "features").glob("*.npz"):
+            with np.load(feature, allow_pickle=False) as data:
+                values = {key: data[key].copy() for key in data.files}
+            values["descriptors"] = np.bitwise_not(values["descriptors"])
+            np.savez_compressed(feature, **values)
+        multi_args = argparse.Namespace(floor_db=[f"3={cache}", f"5={other_cache}"],
+            grout_cache=None, expected_floor=5, expected_db=1, expected_tile=1)
+        before = {str(path): hashlib.sha256(path.read_bytes()).hexdigest()
+                  for folder in (cache, other_cache) for path in folder.rglob("*") if path.is_file()}
+        all_pools, all_config, sources = load_registered_databases(multi_args, c)
+        assert len(all_pools) == 8 and len(sources) == 2
+        assert len({(p['floor'], p['location'], p['tile_index']) for p in all_pools}) == 8
+        assert len({p['name'] for p in all_pools}) == 8
+        q5 = {**qpool, "descriptors": np.bitwise_not(qpool["descriptors"])}
+        multi_results = []
+        for rate in (100, 75, 50, 25, 0):
+            result = run_condition(all_pools, [q5], rate, all_config, root / f"全階_{rate}", multi_args)
+            assert result["predicted_floor"] == 5 and result["predicted_db_location"] == 1
+            assert result["predicted_db_tile"] == 1 and result["correct_tile_identification"] == 1
+            assert result["tile_pair_comparisons"] == 8
+            multi_results.append(result)
+        multi_args.expected_floor = 3
+        wrong_label = run_condition(list(reversed(all_pools)), [q5], 100, all_config,
+                                    root / "全階_順序と正解ラベル変更", multi_args)
+        assert wrong_label["predicted_location"] == multi_results[0]["predicted_location"]
+        assert wrong_label["score_percent"] == multi_results[0]["score_percent"]
+        assert wrong_label["correct_identification"] == 0 and wrong_label["correct_floor_identification"] == 0
+        # 正解階を渡さず、画像読込・四隅補正・全階照合・CSV/JSON保存を一括で検証。
+        multi_args.expected_floor = multi_args.expected_db = multi_args.expected_tile = None
+        multi_args.satsuei = str(db_dir / "db_01.png")
+        multi_args.satsuei_points = "0,0;400,0;400,400;0,400"
+        multi_args.points_size = None
+        multi_args.quad = []
+        multi_args.keep_rates = "100,0"
+        multi_args.output = str(root / "全階_一括実行")
+        pipeline_results = run_sweep(multi_args, c)
+        assert all(r["predicted_floor"] == 3 and r["predicted_db_location"] == 1
+                   and r["predicted_db_tile"] == 1 for r in pipeline_results)
+        experiment = json.loads((root / "全階_一括実行" / "experiment.json").read_text(encoding="utf-8"))
+        assert experiment["registered_tile_count"] == 8 and len(experiment["database_sources"]) == 2
+        with (root / "全階_100" / "location_scores.csv").open(encoding="utf-8-sig") as stream:
+            location_rows = list(csv.DictReader(stream))
+        assert len(location_rows) == 2 and {r['floor'] for r in location_rows} == {'3', '5'}
+        # 不正な階指定・同じDBの二重登録を拒否する。
+        for entries in ([f"3={cache}", f"3={other_cache}"], [f"3={cache}", f"5={cache}"], ['x=cache']):
+            try:
+                database_specs(argparse.Namespace(floor_db=entries, grout_cache=None))
+            except ValueError:
+                pass
+            else:
+                raise AssertionError("DB指定の重複または形式エラーを見逃しました。")
+        after = {str(path): hashlib.sha256(path.read_bytes()).hexdigest()
+                 for folder in (cache, other_cache) for path in folder.rglob("*") if path.is_file()}
+        assert before == after, "照合が登録DBを書き換えました。"
     print("自己テスト成功：目地候補の保持、段階削減、タイル面固定、RANSAC、DB保存、正解ラベルの独立性。")
+    print("複数階テスト成功：同番号の区別、全階比較、階・地点・タイル出力、順序・正解階からの独立性、DB不変。")
     print("※実画像での精度評価や目地自動検出の保証ではありません。")
 
 
@@ -676,8 +889,11 @@ def main() -> None:
     mode.add_argument("--sweep", action="store_true", help="目地使用率を段階比較")
     mode.add_argument("--detect-only", action="store_true", help="補正・目地マスク・候補点だけ保存")
     mode.add_argument("--self-test", action="store_true")
+    mode.add_argument("--check-caches", action="store_true", help="登録済み全階のDBを読んで件数・設定を検査。DBの変更や照合はしない")
     parser.add_argument("--db-dir", default="gazou/db", help="目地を除いていない元2x2登録画像")
-    parser.add_argument("--grout-cache", default="gazou/teian_grout_cache")
+    sources = parser.add_mutually_exclusive_group()
+    sources.add_argument("--grout-cache", help="旧方式の単一DBを明示する場合のみ指定。省略時の照合は登録済み全階")
+    sources.add_argument("--floor-db", action="append", help='登録DBの対応表を上書きする場合に繰り返し指定（例："3=gazou/cache3"）。撮影画像の階の指定ではない')
     parser.add_argument("--split-mode", choices=("auto", "center"), default="auto")
     parser.add_argument("--satsuei", help="撮影画像1枚")
     parser.add_argument("--satsuei-points", help="1タイルの四隅 x,y;x,y;x,y;x,y")
@@ -697,6 +913,7 @@ def main() -> None:
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--max-tiles", type=int, default=12)
     parser.add_argument("--expected-db", type=int, help="採点専用の正解地点。推定には使用しない")
+    parser.add_argument("--expected-floor", type=int, help="採点専用の正解階。省略しても全階の推定は可能。候補の絞り込みには使わない")
     parser.add_argument("--expected-tile", type=int, choices=(1, 2, 3, 4), help="採点専用の正解タイル番号")
     parser.add_argument("--output", help="新規の結果フォルダ。省略時は日時付き")
     args = parser.parse_args()
@@ -707,7 +924,13 @@ def main() -> None:
     check_config(c)
     if args.self_test:
         self_test()
+    elif args.check_caches:
+        load_registered_databases(args, c)
     elif args.build_db:
+        if args.floor_db:
+            parser.error("build-dbは元画像から1キャッシュを作ります。floor-dbは照合時の全階読込用です。")
+        if args.grout_cache is None:
+            args.grout_cache = "gazou/teian_grout_cache"
         build_database(args, c)
     else:
         if not args.satsuei:

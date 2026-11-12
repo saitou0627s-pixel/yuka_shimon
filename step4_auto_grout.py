@@ -7,6 +7,17 @@ r"""目地線・交点から1タイルを自動検出する実験用コード。
 
 処理：縮小→暗い帯の強調→Hough/LSD線分→暗さ・連続性評価→消失点2系統
 →線の交点→四辺で目地を確認→候補の重複除去→幾何・画像情報で順位付け。
+--clahe は縮小後の検出用グレー画像だけに局所コントラスト補正を行う。
+既定はオフ。線分・四辺の評価には同じ補正画像を使い、照合へ渡す元画像は変えない。
+DB作成側も利用する extract_lines 自体には補正を追加しない。
+撮影画像の検出ではHough/LSD各方式の候補枠を確保し、評価本数は合計500本まで。
+--line-selection legacy で従来の長さ順500本と比較できる。
+--line-selection diverse は方式ごとの枠に加え、線分の向きにも枠を分散する。
+既定のbalancedと従来のlegacyは比較のため変更しない。
+--candidate-ranking large-clear は既存の採用候補内で、最高目地スコアから
+--score-margin以内の候補のうち画像上の面積最大を選ぶ。既定のscoreは従来順。
+この順位変更は候補抽出後だけに適用し、目地判定条件やDB・照合結果を使わない。
+DB作成側が既定引数で呼ぶ extract_lines の候補選択は従来方式のまま。
 消失点が無限遠になる、ほぼ平行な線も同次座標で扱う。
 これは床の意味的セグメンテーションではない。影・模様も誤検出し得る。
 目地が周囲より暗い床を対象とする。設定値は論文由来ではない実験値。
@@ -15,6 +26,7 @@ r"""目地線・交点から1タイルを自動検出する実験用コード。
  .\.venv\Scripts\python.exe -u .\step4_auto_grout.py --satsuei "gazou\satsuei\diagonal_angle_1.jpg"
  .\.venv\Scripts\python.exe -u .\step4_auto_grout.py --satsuei "gazou\satsuei\diagonal_angle_1.jpg" --run-sweep --expected-db 1
  .\.venv\Scripts\python.exe .\step4_auto_grout.py --self-test
+ .\.venv\Scripts\python.exe -u .\step4_auto_grout.py --satsuei "gazou\satsuei\night_5_1.jpg" --clahe
 
 依存：opencv-python, numpy。検出単独ではstep3/step4のimportは不要。
 """
@@ -49,6 +61,12 @@ class Config:
     max_area: float = 0.65
     max_candidates: int = 6
     seed: int = 0
+    clahe: bool = False
+    clahe_clip_limit: float = 2.0
+    clahe_grid: int = 8  # CLAHEの画像分割数（床のタイル数ではない）
+    line_selection: str = "balanced"
+    candidate_ranking: str = "score"
+    score_margin: float = 0.05  # 検出スコアの差（確率ではない）。暫定値。
 
 
 def path_of(value: str) -> Path:
@@ -119,7 +137,61 @@ def line_of(p, q):
     return line / max(np.linalg.norm(line[:2]), 1e-12)
 
 
-def extract_lines(gray: np.ndarray, c: Config):
+def select_segment_indices(lengths, source_ids, minimum, mode="balanced", budget=500,
+                           angles=None):
+    """各方式に半分ずつの枠を確保。未使用枠は残りの長い線分で埋める。
+
+    source_ids: 0=Hough, 1=LSD。採否の明暗・連続性閾値は変えない。
+    戻り値の順序は長さ順で、同じ入力なら選択は決定的。
+    """
+    if mode not in ("legacy", "balanced", "diverse"):
+        raise ValueError("line-selectionはlegacy、balanced、diverseのいずれかです。")
+    eligible = np.flatnonzero(lengths >= minimum)
+    ranked = eligible[np.argsort(-lengths[eligible])]
+    if mode == "legacy":
+        return ranked[:budget]
+    if mode == "diverse":
+        if angles is None or len(angles) != len(lengths):
+            raise ValueError("diverseには各線分の向きが必要です。")
+        # 床が水平・垂直という前提は置かない。全方向を等しく扱う。
+        bins = np.floor((np.asarray(angles) % 180.) / 10.).astype(int)
+
+        def take_direction_balanced(ids, count):
+            groups = [ids[bins[ids] == b] for b in range(18)]
+            chosen = []
+            level = 0
+            while len(chosen) < count:
+                added = False
+                for group in groups:
+                    if level < len(group):
+                        chosen.append(int(group[level]))
+                        added = True
+                    if len(chosen) == count:
+                        break
+                if not added:
+                    break
+                level += 1
+            return np.asarray(chosen, dtype=int)
+
+        selected = np.zeros(len(lengths), dtype=bool)
+        for source in (0, 1):
+            ids = ranked[source_ids[ranked] == source]
+            selected[take_direction_balanced(ids, budget // 2)] = True
+        remaining = budget - int(selected.sum())
+        if remaining > 0:
+            selected[take_direction_balanced(ranked[~selected[ranked]], remaining)] = True
+        return ranked[selected[ranked]]
+    selected = np.zeros(len(lengths), dtype=bool)
+    quota = budget // 2
+    for source in (0, 1):
+        selected[ranked[source_ids[ranked] == source][:quota]] = True
+    remaining = budget - int(selected.sum())
+    if remaining > 0:
+        selected[ranked[~selected[ranked]][:remaining]] = True
+    return ranked[selected[ranked]]
+
+
+def extract_lines(gray: np.ndarray, c: Config, selection="legacy", diagnostics=None):
     """複数幅のblack-hatで暗い帯を強調し、Hough線分を得る。"""
     smooth = cv2.GaussianBlur(gray.astype(np.float32), (3, 3), 0.6)
     byte = np.uint8(np.clip(smooth, 0, 255))
@@ -137,18 +209,26 @@ def extract_lines(gray: np.ndarray, c: Config):
                           minLineLength=minimum, maxLineGap=max(4, extent // 80))
     lsd = cv2.createLineSegmentDetector(cv2.LSD_REFINE_STD).detect(byte)[0]
     parts = []
-    if raw is not None:
-        parts.append(raw.reshape(-1, 4))
-    if lsd is not None:
-        parts.append(lsd.reshape(-1, 4))
+    source_parts = []
+    for source, detected in enumerate((raw, lsd)):
+        if detected is not None:
+            segments_part = detected.reshape(-1, 4)
+            parts.append(segments_part)
+            source_parts.append(np.full(len(segments_part), source, dtype=np.int8))
     raw = np.concatenate(parts) if parts else None
+    source_ids = np.concatenate(source_parts) if source_parts else np.empty(0, np.int8)
     records = []
     raw_count = 0 if raw is None else len(raw)
+    lengths = np.empty(0)
+    chosen = np.empty(0, dtype=int)
     if raw is not None:
         segments = raw.reshape(-1, 4).astype(float)
         lengths = np.linalg.norm(segments[:, :2] - segments[:, 2:], axis=1)
-        indices = np.flatnonzero(lengths >= minimum)
-        for index in indices[np.argsort(-lengths[indices])][:500]:
+        vectors = segments[:, 2:] - segments[:, :2]
+        angles = np.degrees(np.arctan2(vectors[:, 1], vectors[:, 0])) % 180.
+        chosen = select_segment_indices(lengths, source_ids, minimum, selection,
+                                        angles=angles)
+        for index in chosen:
             p, q = segments[index, :2], segments[index, 2:]
             r = band_support(smooth, p, q, c.dark_difference, search=True)
             if r["support"] < c.line_support or r["continuity"] < 0.66:
@@ -156,6 +236,19 @@ def extract_lines(gray: np.ndarray, c: Config):
             r["line"] = line_of(r["p"], r["q"])
             r["length"] = float(lengths[index])
             records.append(r)
+    if diagnostics is not None:
+        diagnostics.update(mode=selection, evaluation_budget=500,
+                           minimum_length_px=minimum, evaluated_segments=len(chosen),
+                           passed_band_filter=len(records), sources={
+            name: dict(raw=int(np.sum(source_ids == source)),
+                       eligible=int(np.sum((source_ids == source) & (lengths >= minimum))),
+                       evaluated=int(np.sum(source_ids[chosen] == source)))
+            for source, name in enumerate(("hough", "lsd"))})
+        if selection == "diverse":
+            diagnostics["angle_bin_width_degrees"] = 10
+            diagnostics["evaluated_angle_histogram"] = np.bincount(
+                np.floor(angles[chosen] / 10.).astype(int) if len(chosen) else np.empty(0, int),
+                minlength=18).tolist()
     records.sort(key=lambda r: r["score"] * math.sqrt(r["length"]), reverse=True)
     # 同一目地に沿う線分を統合。離れた共線線分は端点の範囲を拡張する。
     merged = []
@@ -347,25 +440,90 @@ def enumerate_quads(gray, records, families, c):
     return accepted
 
 
+def prepare_detection_gray(work: np.ndarray, c: Config):
+    """検出用だけを補正。入力画像を変更せず、既定は従来と同じグレー化。"""
+    gray = cv2.cvtColor(work, cv2.COLOR_BGR2GRAY)
+    seconds = 0.0
+    if c.clahe:
+        if (not math.isfinite(c.clahe_clip_limit) or c.clahe_clip_limit <= 0
+                or not 1 <= c.clahe_grid <= 64):
+            raise ValueError("CLAHE設定が不正です。clip-limitは正の有限値、gridは1～64です。")
+        started = time.perf_counter()
+        operator = cv2.createCLAHE(clipLimit=c.clahe_clip_limit,
+                                   tileGridSize=(c.clahe_grid, c.clahe_grid))
+        gray = operator.apply(gray)
+        seconds = time.perf_counter() - started
+    details = dict(mode="clahe" if c.clahe else "none",
+                   clip_limit=c.clahe_clip_limit if c.clahe else None,
+                   grid_size=[c.clahe_grid, c.clahe_grid] if c.clahe else None,
+                   scope="detection_only", matching_uses_original_image=True)
+    return gray, details, seconds
+
+
+def rank_candidates(candidates, c, image_area):
+    """抽出済み（重複除去・件数上限適用済み）の候補の選択だけを変える。"""
+    if c.candidate_ranking not in ("score", "large-clear"):
+        raise ValueError("candidate-rankingはscoreまたはlarge-clearです。")
+    if not math.isfinite(c.score_margin) or not 0 <= c.score_margin <= 1:
+        raise ValueError("score-marginは0～1の有限値です。")
+    # 元の検出順を記録する。入力の候補・配列を変更しない。
+    rows = [dict(r, score_rank=i) for i, r in enumerate(candidates, 1)]
+    top_score = max((r["score"] for r in rows), default=None)
+    cutoff = top_score - c.score_margin if top_score is not None else None
+    eligible = ([r for r in rows if r["score"] + 1e-12 >= cutoff]
+                if rows else [])
+    if rows and c.candidate_ranking == "large-clear":
+        winner = max(eligible, key=lambda r: (r["area"], r["score"], -r["score_rank"]))
+        rows = [winner] + [r for r in rows if r is not winner]
+    selected = rows[0] if rows else None
+    details = dict(mode=c.candidate_ranking,
+                   scope="existing_detected_candidates_only",
+                   score_margin=c.score_margin if c.candidate_ranking == "large-clear" else None,
+                   top_detection_score=top_score,
+                   quality_cutoff=cutoff if c.candidate_ranking == "large-clear" else None,
+                   quality_eligible_count=len(eligible) if c.candidate_ranking == "large-clear" else None,
+                   selected_score_rank=selected["score_rank"] if selected else None,
+                   selected_area_fraction=(selected["area"] / image_area if selected else None))
+    return rows, details
+
+
 def detect(image, c):
+    started = time.perf_counter()
     factor = min(1., c.max_side / max(image.shape[:2]))
     size = (round(image.shape[1] * factor), round(image.shape[0] * factor))
     work = cv2.resize(image, size, interpolation=cv2.INTER_AREA)
-    gray = cv2.cvtColor(work, cv2.COLOR_BGR2GRAY)
-    records, blackhat, mask, raw_count = extract_lines(gray, c)
+    gray, preprocessing, clahe_seconds = prepare_detection_gray(work, c)
+    prepared = time.perf_counter()
+    line_selection = {}
+    records, blackhat, mask, raw_count = extract_lines(
+        gray, c, selection=c.line_selection, diagnostics=line_selection)
+    extracted = time.perf_counter()
     families, vps = vp_families(records, gray.shape, c)
+    classified = time.perf_counter()
     candidates = enumerate_quads(gray, records, families, c)
+    candidates, candidate_ranking = rank_candidates(candidates, c, gray.size)
     # 実際のresize寸法に合わせてx,yを別々に復元する。
     xy_scale = np.array([work.shape[1] / image.shape[1], work.shape[0] / image.shape[0]])
     for r in candidates:
         r["quad_original"] = r["quad"] / xy_scale
+    finished = time.perf_counter()
+    timings = dict(resize_gray_and_preprocessing=prepared - started,
+                   clahe=clahe_seconds,
+                   line_extraction=extracted - prepared,
+                   vanishing_point_classification=classified - extracted,
+                   candidate_evaluation=finished - classified,
+                   detection_total=finished - started)
+    # claheはresize_gray_and_preprocessingの内数。合計時に二重加算しない。
     return dict(work=work, records=records, families=families, vps=vps,
                 candidates=candidates, blackhat=blackhat, mask=mask,
-                raw_segments=raw_count, xy_scale=xy_scale)
+                raw_segments=raw_count, xy_scale=xy_scale, detection_gray=gray,
+                preprocessing=preprocessing, timings_seconds=timings,
+                line_selection=line_selection, candidate_ranking=candidate_ranking)
 
 
 def save_results(image, result, output, c):
     output.mkdir(parents=True, exist_ok=False)
+    save_image(output / "00_detection_gray.png", result["detection_gray"])
     save_image(output / "01_grout_emphasis.png", result["blackhat"])
     save_image(output / "02_dark_band_mask.png", result["mask"])
     lines_picture = result["work"].copy()
@@ -399,6 +557,8 @@ def save_results(image, result, output, c):
         points = r["quad_original"]
         text = ";".join(f"{x:.2f},{y:.2f}" for x, y in points)
         rows.append(dict(candidate=number, detection_score=r["score"],
+                         score_rank=r["score_rank"], area_work_px=r["area"],
+                         area_fraction=r["area"] / result["detection_gray"].size,
                          quad_original_xy=points.tolist(), points_argument=text,
                          side_support=r["side_support"],
                          estimated_band_offset_px=r["side_width"]))
@@ -408,15 +568,34 @@ def save_results(image, result, output, c):
                   raw_segments=result["raw_segments"], accepted_lines=len(result["records"]),
                   family_counts=[len(x) for x in result["families"]],
                   vanishing_points_homogeneous_work=result["vps"], candidates=rows,
+                  preprocessing=result["preprocessing"],
+                  line_selection=result["line_selection"],
+                  candidate_ranking=result["candidate_ranking"],
+                  timings_seconds=result["timings_seconds"],
                   selected_candidate=1 if rows else None,
                   warning="検出スコアは照合の一致割合・確率ではありません。目視確認が必要です。")
     (output / "detection.json").write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
-    lines = ["目地交点の自動検出（実験実装）", f"タイル候補数：{len(rows)}",
+    correction = (f"CLAHEあり（clip-limit={c.clahe_clip_limit:g}、画像分割={c.clahe_grid}×{c.clahe_grid}）"
+                  if c.clahe else "CLAHEなし（従来方式）")
+    selection = result["line_selection"]
+    sources = selection["sources"]
+    lines = ["目地交点の自動検出（実験実装）", f"検出用前処理：{correction}",
+             f"線分候補の選択：{selection['mode']}（評価上限500本）",
+             f"評価線分：Hough {sources['hough']['evaluated']}本 / LSD {sources['lsd']['evaluated']}本",
+             f"目地条件を通過：{selection['passed_band_filter']}本 / 統合後：{len(result['records'])}本",
+             "補正対象は検出用画像のみ。切り出し・照合には元画像を使用します。",
+             f"CLAHE処理時間：{result['timings_seconds']['clahe'] * 1000:.2f}ミリ秒",
+             f"検出計算時間：{result['timings_seconds']['detection_total']:.3f}秒（画像読込・診断保存を除く）",
+             f"タイル候補数：{len(rows)}",
              "候補があれば04_detected_tiles.jpgの緑枠が採用候補、赤丸が四隅です。",
              "tile_*_rectified_preview.png は検出確認用。既存照合の補正画像とは別です。",
              "診断用画像の黒い領域は画像外。valid_maskで確認してください。",
              "未検出時に画像中心や任意の四角形へフォールバックはしません。"]
     if rows:
+        ranking = result["candidate_ranking"]
+        lines += [f"候補の選択：{c.candidate_ranking} / 採用候補の元スコア順位：{ranking['selected_score_rank']}位"]
+        if c.candidate_ranking == "large-clear":
+            lines += [f"最高目地スコアとの差{c.score_margin:g}以内から面積最大を選択（暫定条件）"]
         lines += [f"検出スコア：{rows[0]['detection_score']:.3f}（一致率ではない）",
                   f"元画像座標の四隅：{rows[0]['points_argument']}"]
     (output / "detection_summary.txt").write_text("\n".join(lines) + "\n", encoding="utf-8")
@@ -472,6 +651,18 @@ def self_test():
         assert max(overlaps) > 0.85, f"合成{label}の四隅誤差が大きい：{max(overlaps)}"
         print(f"自己テスト {label}: 第1候補IoU={max(overlaps):.3f}")
     assert not detect(np.full((500, 500, 3), 180, np.uint8), c)["candidates"]
+    enabled = Config(max_side=1000, clahe=True)
+    preserved = image.copy()
+    plain, plain_details, plain_seconds = prepare_detection_gray(image, c)
+    assert np.array_equal(plain, cv2.cvtColor(image, cv2.COLOR_BGR2GRAY))
+    assert plain_details["mode"] == "none" and plain_seconds == 0
+    corrected, details, elapsed = prepare_detection_gray(image, enabled)
+    assert corrected.shape == plain.shape and corrected.dtype == np.uint8
+    assert details["mode"] == "clahe" and elapsed >= 0
+    assert np.array_equal(image, preserved), "検出前処理が元画像を変更しました。"
+    assert detect(image, enabled)["candidates"], "CLAHEありの合成画像を検出できません。"
+    assert not detect(np.full((500, 500, 3), 180, np.uint8), enabled)["candidates"]
+    print("自己テスト CLAHE: オフの同一性・入力保持・オンの検出・無地の未検出を確認")
     print("自己テスト成功。合成画像の検証であり、実際の床での成功を保証しません。")
 
 
@@ -493,6 +684,15 @@ def main():
     parser.add_argument("--max-area", type=float, default=0.65)
     parser.add_argument("--max-candidates", type=int, default=6)
     parser.add_argument("--seed", type=int, default=0)
+    parser.add_argument("--line-selection", choices=("balanced", "legacy", "diverse"), default="balanced",
+                        help="balanced: 方式別の枠。diverse: 方式と向きに分散（計500本）。legacy: 従来の長さ順500本")
+    parser.add_argument("--candidate-ranking", choices=("score", "large-clear"), default="score",
+                        help="score: 従来順。large-clear: スコアの近い採用候補から画像上の面積最大を選択")
+    parser.add_argument("--score-margin", type=float, default=0.05,
+                        help="large-clearで許容する最高目地スコアとの差。0～1（暫定値0.05）")
+    parser.add_argument("--clahe", action="store_true", help="検出用の縮小グレー画像だけをCLAHE補正（既定はオフ）")
+    parser.add_argument("--clahe-clip-limit", type=float, default=2.0, help="CLAHEのコントラスト制限。正の有限値（暫定値2.0）")
+    parser.add_argument("--clahe-grid", type=int, default=8, help="CLAHEの各軸の画像分割数1～64。床タイル数ではない（既定8）")
     parser.add_argument("--self-test", action="store_true")
     args = parser.parse_args()
     if args.self_test:
@@ -501,11 +701,16 @@ def main():
     if not args.satsuei:
         parser.error("--satsueiを指定してください。")
     c = Config(**{k: getattr(args, k) for k in Config.__dataclass_fields__})
+    if not math.isfinite(c.score_margin) or not 0 <= c.score_margin <= 1:
+        raise ValueError("score-marginは0～1の有限値です。")
     if (c.max_side < 200 or not 0 < c.min_length < 1 or c.dark_difference <= 0
             or not 0 < c.line_support <= 1 or not 0 < c.side_support <= 1
             or not 0 < c.angle_tolerance < 30 or not 0 < c.min_area < c.max_area < 1
             or c.max_candidates < 1 or c.seed < 0):
         raise ValueError("検出設定の範囲が不正です。")
+    if (not math.isfinite(c.clahe_clip_limit) or c.clahe_clip_limit <= 0
+            or not 1 <= c.clahe_grid <= 64):
+        raise ValueError("CLAHE設定が不正です。clip-limitは正の有限値、gridは1～64です。")
     image_path = path_of(args.satsuei)
     image = read_image(image_path)
     output = path_of(args.output) if args.output else BASE / "kekka" / ("auto_grout_" + datetime.now().strftime("%Y%m%d_%H%M%S_%f"))
