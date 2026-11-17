@@ -1,0 +1,380 @@
+{
+  "format": "floor-fingerprint-proposal-single-tile-v1",
+  "config": {
+    "tile_size": 512,
+    "features_per_tile": 2500,
+    "fast_threshold": 5,
+    "margin_ratio": 0.04,
+    "spatial_radius": 18,
+    "hamming": 100,
+    "threshold": 0.06,
+    "trials": 20000,
+    "seed": 0,
+    "detection_max_side": 1400,
+    "max_tiles": 12,
+    "max_residual_corner_shift_ratio": 0.2
+  },
+  "tiles": [
+    {
+      "location": 1,
+      "tile_index": 1,
+      "name": "db_01_tile_1",
+      "source_image": "C:\\Users\\saitoukakeru\\OneDrive\\デスクトップ\\yuka_shimon\\gazou\\db_cache\\db_tiles\\db_011.png",
+      "feature_count": 2500,
+      "image_file": "tiles/db_01_tile_1.png",
+      "feature_file": "features/db_01_tile_1.npz"
+    },
+    {
+      "location": 1,
+      "tile_index": 2,
+      "name": "db_01_tile_2",
+      "source_image": "C:\\Users\\saitoukakeru\\OneDrive\\デスクトップ\\yuka_shimon\\gazou\\db_cache\\db_tiles\\db_012.png",
+      "feature_count": 2500,
+      "image_file": "tiles/db_01_tile_2.png",
+      "feature_file": "features/db_01_tile_2.npz"
+    },
+    {
+      "location": 1,
+      "tile_index": 3,
+      "name": "db_01_tile_3",
+      "source_image": "C:\\Users\\saitoukakeru\\OneDrive\\デスクトップ\\yuka_shimon\\gazou\\db_cache\\db_tiles\\db_013.png",
+      "feature_count": 2500,
+      "image_file": "tiles/db_01_tile_3.png",
+      "feature_file": "features/db_01_tile_3.npz"
+    },
+    {
+      "location": 1,
+      "tile_index": 4,
+      "name": "db_01_tile_4",
+      "source_image": "C:\\Users\\saitoukakeru\\OneDrive\\デスクトップ\\yuka_shimon\\gazou\\db_cache\\db_tiles\\db_014.png",
+      "feature_count": 2500,
+      "image_file": "tiles/db_01_tile_4.png",
+      "feature_file": "features/db_01_tile_4.npz"
+    },
+    {
+      "location": 2,
+      "tile_index": 1,
+      "name": "db_02_tile_1",
+      "source_image": "C:\\Users\\saitoukakeru\\OneDrive\\デスクトップ\\yuka_shimon\\gazou\\db_cache\\db_tiles\\db_021.png",
+      "feature_count": 2500,
+      "image_file": "tiles/db_02_tile_1.png",
+      "feature_file": "features/db_02_tile_1.npz"
+    },
+    {
+      "location": 2,
+      "tile_index": 2,
+      "name": "db_02_tile_2",
+      "source_image": "C:\\Users\\saitoukakeru\\OneDrive\\デスクトップ\\yuka_shimon\\gazou\\db_cache\\db_tiles\\db_022.png",
+      "feature_count": 2500,
+      "image_file": "tiles/db_02_tile_2.png",
+      "feature_file": "features/db_02_tile_2.npz"
+    },
+    {
+      "location": 2,
+      "tile_index": 3,
+      "name": "db_02_tile_3",
+      "source_image": "C:\\Users\\saitoukakeru\\OneDrive\\デスクトップ\\yuka_shimon\\gazou\\db_cache\\db_tiles\\db_023.png",
+      "feature_count": 2500,
+      "image_file": "tiles/db_02_tile_3.png",
+      "feature_file": "features/db_02_tile_3.npz"
+    },
+    {
+      "location": 2,
+      "tile_index": 4,
+      "name": "db_02_tile_4",
+      "source_image": "C:\\Users\\saitoukakeru\\OneDrive\\デスクトップ\\yuka_shimon\\gazou\\db_cache\\db_tiles\\db_024.png",
+      "feature_count": 2500,
+      "image_file": "tiles/db_02_tile_4.png",
+      "feature_file": "features/db_02_tile_4.npz"
+    },
+    {
+      "location": 3,
+      "tile_index": 1,
+      "name": "db_03_tile_1",
+      "source_image": "C:\\Users\\saitoukakeru\\OneDrive\\デスクトップ\\yuka_shimon\\gazou\\db_cache\\db_tiles\\db_031.png",
+      "feature_count": 2500,
+      "image_file": "tiles/db_03_tile_1.png",
+      "feature_file": "features/db_03_tile_1.npz"
+    },
+    {
+      "location": 3,
+      "tile_index": 2,
+      "name": "db_03_tile_2",
+      "source_image": "C:\\Users\\saitoukakeru\\OneDrive\\デスクトップ\\yuka_shimon\\gazou\\db_cache\\db_tiles\\db_032.png",
+      "feature_count": 2500,
+      "image_file": "tiles/db_03_tile_2.png",
+      "feature_file": "features/db_03_tile_2.npz"
+    },
+    {
+      "location": 3,
+      "tile_index": 3,
+      "name": "db_03_tile_3",
+      "source_image": "C:\\Users\\saitoukakeru\\OneDrive\\デスクトップ\\yuka_shimon\\gazou\\db_cache\\db_tiles\\db_033.png",
+      "feature_count": 2500,
+      "image_file": "tiles/db_03_tile_3.png",
+      "feature_file": "features/db_03_tile_3.npz"
+    },
+    {
+      "location": 3,
+      "tile_index": 4,
+      "name": "db_03_tile_4",
+      "source_image": "C:\\Users\\saitoukakeru\\OneDrive\\デスクトップ\\yuka_shimon\\gazou\\db_cache\\db_tiles\\db_034.png",
+      "feature_count": 2500,
+      "image_file": "tiles/db_03_tile_4.png",
+      "feature_file": "features/db_03_tile_4.npz"
+    },
+    {
+      "location": 4,
+      "tile_index": 1,
+      "name": "db_04_tile_1",
+      "source_image": "C:\\Users\\saitoukakeru\\OneDrive\\デスクトップ\\yuka_shimon\\gazou\\db_cache\\db_tiles\\db_041.png",
+      "feature_count": 2500,
+      "image_file": "tiles/db_04_tile_1.png",
+      "feature_file": "features/db_04_tile_1.npz"
+    },
+    {
+      "location": 4,
+      "tile_index": 2,
+      "name": "db_04_tile_2",
+      "source_image": "C:\\Users\\saitoukakeru\\OneDrive\\デスクトップ\\yuka_shimon\\gazou\\db_cache\\db_tiles\\db_042.png",
+      "feature_count": 2500,
+      "image_file": "tiles/db_04_tile_2.png",
+      "feature_file": "features/db_04_tile_2.npz"
+    },
+    {
+      "location": 4,
+      "tile_index": 3,
+      "name": "db_04_tile_3",
+      "source_image": "C:\\Users\\saitoukakeru\\OneDrive\\デスクトップ\\yuka_shimon\\gazou\\db_cache\\db_tiles\\db_043.png",
+      "feature_count": 2500,
+      "image_file": "tiles/db_04_tile_3.png",
+      "feature_file": "features/db_04_tile_3.npz"
+    },
+    {
+      "location": 4,
+      "tile_index": 4,
+      "name": "db_04_tile_4",
+      "source_image": "C:\\Users\\saitoukakeru\\OneDrive\\デスクトップ\\yuka_shimon\\gazou\\db_cache\\db_tiles\\db_044.png",
+      "feature_count": 2500,
+      "image_file": "tiles/db_04_tile_4.png",
+      "feature_file": "features/db_04_tile_4.npz"
+    },
+    {
+      "location": 5,
+      "tile_index": 1,
+      "name": "db_05_tile_1",
+      "source_image": "C:\\Users\\saitoukakeru\\OneDrive\\デスクトップ\\yuka_shimon\\gazou\\db_cache\\db_tiles\\db_051.png",
+      "feature_count": 2500,
+      "image_file": "tiles/db_05_tile_1.png",
+      "feature_file": "features/db_05_tile_1.npz"
+    },
+    {
+      "location": 5,
+      "tile_index": 2,
+      "name": "db_05_tile_2",
+      "source_image": "C:\\Users\\saitoukakeru\\OneDrive\\デスクトップ\\yuka_shimon\\gazou\\db_cache\\db_tiles\\db_052.png",
+      "feature_count": 2500,
+      "image_file": "tiles/db_05_tile_2.png",
+      "feature_file": "features/db_05_tile_2.npz"
+    },
+    {
+      "location": 5,
+      "tile_index": 3,
+      "name": "db_05_tile_3",
+      "source_image": "C:\\Users\\saitoukakeru\\OneDrive\\デスクトップ\\yuka_shimon\\gazou\\db_cache\\db_tiles\\db_053.png",
+      "feature_count": 2500,
+      "image_file": "tiles/db_05_tile_3.png",
+      "feature_file": "features/db_05_tile_3.npz"
+    },
+    {
+      "location": 5,
+      "tile_index": 4,
+      "name": "db_05_tile_4",
+      "source_image": "C:\\Users\\saitoukakeru\\OneDrive\\デスクトップ\\yuka_shimon\\gazou\\db_cache\\db_tiles\\db_054.png",
+      "feature_count": 2500,
+      "image_file": "tiles/db_05_tile_4.png",
+      "feature_file": "features/db_05_tile_4.npz"
+    },
+    {
+      "location": 6,
+      "tile_index": 1,
+      "name": "db_06_tile_1",
+      "source_image": "C:\\Users\\saitoukakeru\\OneDrive\\デスクトップ\\yuka_shimon\\gazou\\db_cache\\db_tiles\\db_061.png",
+      "feature_count": 2500,
+      "image_file": "tiles/db_06_tile_1.png",
+      "feature_file": "features/db_06_tile_1.npz"
+    },
+    {
+      "location": 6,
+      "tile_index": 2,
+      "name": "db_06_tile_2",
+      "source_image": "C:\\Users\\saitoukakeru\\OneDrive\\デスクトップ\\yuka_shimon\\gazou\\db_cache\\db_tiles\\db_062.png",
+      "feature_count": 2500,
+      "image_file": "tiles/db_06_tile_2.png",
+      "feature_file": "features/db_06_tile_2.npz"
+    },
+    {
+      "location": 6,
+      "tile_index": 3,
+      "name": "db_06_tile_3",
+      "source_image": "C:\\Users\\saitoukakeru\\OneDrive\\デスクトップ\\yuka_shimon\\gazou\\db_cache\\db_tiles\\db_063.png",
+      "feature_count": 2500,
+      "image_file": "tiles/db_06_tile_3.png",
+      "feature_file": "features/db_06_tile_3.npz"
+    },
+    {
+      "location": 6,
+      "tile_index": 4,
+      "name": "db_06_tile_4",
+      "source_image": "C:\\Users\\saitoukakeru\\OneDrive\\デスクトップ\\yuka_shimon\\gazou\\db_cache\\db_tiles\\db_064.png",
+      "feature_count": 2500,
+      "image_file": "tiles/db_06_tile_4.png",
+      "feature_file": "features/db_06_tile_4.npz"
+    },
+    {
+      "location": 7,
+      "tile_index": 1,
+      "name": "db_07_tile_1",
+      "source_image": "C:\\Users\\saitoukakeru\\OneDrive\\デスクトップ\\yuka_shimon\\gazou\\db_cache\\db_tiles\\db_071.png",
+      "feature_count": 2500,
+      "image_file": "tiles/db_07_tile_1.png",
+      "feature_file": "features/db_07_tile_1.npz"
+    },
+    {
+      "location": 7,
+      "tile_index": 2,
+      "name": "db_07_tile_2",
+      "source_image": "C:\\Users\\saitoukakeru\\OneDrive\\デスクトップ\\yuka_shimon\\gazou\\db_cache\\db_tiles\\db_072.png",
+      "feature_count": 2500,
+      "image_file": "tiles/db_07_tile_2.png",
+      "feature_file": "features/db_07_tile_2.npz"
+    },
+    {
+      "location": 7,
+      "tile_index": 3,
+      "name": "db_07_tile_3",
+      "source_image": "C:\\Users\\saitoukakeru\\OneDrive\\デスクトップ\\yuka_shimon\\gazou\\db_cache\\db_tiles\\db_073.png",
+      "feature_count": 2500,
+      "image_file": "tiles/db_07_tile_3.png",
+      "feature_file": "features/db_07_tile_3.npz"
+    },
+    {
+      "location": 7,
+      "tile_index": 4,
+      "name": "db_07_tile_4",
+      "source_image": "C:\\Users\\saitoukakeru\\OneDrive\\デスクトップ\\yuka_shimon\\gazou\\db_cache\\db_tiles\\db_074.png",
+      "feature_count": 2500,
+      "image_file": "tiles/db_07_tile_4.png",
+      "feature_file": "features/db_07_tile_4.npz"
+    },
+    {
+      "location": 8,
+      "tile_index": 1,
+      "name": "db_08_tile_1",
+      "source_image": "C:\\Users\\saitoukakeru\\OneDrive\\デスクトップ\\yuka_shimon\\gazou\\db_cache\\db_tiles\\db_081.png",
+      "feature_count": 2500,
+      "image_file": "tiles/db_08_tile_1.png",
+      "feature_file": "features/db_08_tile_1.npz"
+    },
+    {
+      "location": 8,
+      "tile_index": 2,
+      "name": "db_08_tile_2",
+      "source_image": "C:\\Users\\saitoukakeru\\OneDrive\\デスクトップ\\yuka_shimon\\gazou\\db_cache\\db_tiles\\db_082.png",
+      "feature_count": 2500,
+      "image_file": "tiles/db_08_tile_2.png",
+      "feature_file": "features/db_08_tile_2.npz"
+    },
+    {
+      "location": 8,
+      "tile_index": 3,
+      "name": "db_08_tile_3",
+      "source_image": "C:\\Users\\saitoukakeru\\OneDrive\\デスクトップ\\yuka_shimon\\gazou\\db_cache\\db_tiles\\db_083.png",
+      "feature_count": 2500,
+      "image_file": "tiles/db_08_tile_3.png",
+      "feature_file": "features/db_08_tile_3.npz"
+    },
+    {
+      "location": 8,
+      "tile_index": 4,
+      "name": "db_08_tile_4",
+      "source_image": "C:\\Users\\saitoukakeru\\OneDrive\\デスクトップ\\yuka_shimon\\gazou\\db_cache\\db_tiles\\db_084.png",
+      "feature_count": 2500,
+      "image_file": "tiles/db_08_tile_4.png",
+      "feature_file": "features/db_08_tile_4.npz"
+    },
+    {
+      "location": 9,
+      "tile_index": 1,
+      "name": "db_09_tile_1",
+      "source_image": "C:\\Users\\saitoukakeru\\OneDrive\\デスクトップ\\yuka_shimon\\gazou\\db_cache\\db_tiles\\db_091.png",
+      "feature_count": 2500,
+      "image_file": "tiles/db_09_tile_1.png",
+      "feature_file": "features/db_09_tile_1.npz"
+    },
+    {
+      "location": 9,
+      "tile_index": 2,
+      "name": "db_09_tile_2",
+      "source_image": "C:\\Users\\saitoukakeru\\OneDrive\\デスクトップ\\yuka_shimon\\gazou\\db_cache\\db_tiles\\db_092.png",
+      "feature_count": 2500,
+      "image_file": "tiles/db_09_tile_2.png",
+      "feature_file": "features/db_09_tile_2.npz"
+    },
+    {
+      "location": 9,
+      "tile_index": 3,
+      "name": "db_09_tile_3",
+      "source_image": "C:\\Users\\saitoukakeru\\OneDrive\\デスクトップ\\yuka_shimon\\gazou\\db_cache\\db_tiles\\db_093.png",
+      "feature_count": 2500,
+      "image_file": "tiles/db_09_tile_3.png",
+      "feature_file": "features/db_09_tile_3.npz"
+    },
+    {
+      "location": 9,
+      "tile_index": 4,
+      "name": "db_09_tile_4",
+      "source_image": "C:\\Users\\saitoukakeru\\OneDrive\\デスクトップ\\yuka_shimon\\gazou\\db_cache\\db_tiles\\db_094.png",
+      "feature_count": 2500,
+      "image_file": "tiles/db_09_tile_4.png",
+      "feature_file": "features/db_09_tile_4.npz"
+    },
+    {
+      "location": 10,
+      "tile_index": 1,
+      "name": "db_10_tile_1",
+      "source_image": "C:\\Users\\saitoukakeru\\OneDrive\\デスクトップ\\yuka_shimon\\gazou\\db_cache\\db_tiles\\db_101.png",
+      "feature_count": 171,
+      "image_file": "tiles/db_10_tile_1.png",
+      "feature_file": "features/db_10_tile_1.npz"
+    },
+    {
+      "location": 10,
+      "tile_index": 2,
+      "name": "db_10_tile_2",
+      "source_image": "C:\\Users\\saitoukakeru\\OneDrive\\デスクトップ\\yuka_shimon\\gazou\\db_cache\\db_tiles\\db_102.png",
+      "feature_count": 1330,
+      "image_file": "tiles/db_10_tile_2.png",
+      "feature_file": "features/db_10_tile_2.npz"
+    },
+    {
+      "location": 10,
+      "tile_index": 3,
+      "name": "db_10_tile_3",
+      "source_image": "C:\\Users\\saitoukakeru\\OneDrive\\デスクトップ\\yuka_shimon\\gazou\\db_cache\\db_tiles\\db_103.png",
+      "feature_count": 78,
+      "image_file": "tiles/db_10_tile_3.png",
+      "feature_file": "features/db_10_tile_3.npz"
+    },
+    {
+      "location": 10,
+      "tile_index": 4,
+      "name": "db_10_tile_4",
+      "source_image": "C:\\Users\\saitoukakeru\\OneDrive\\デスクトップ\\yuka_shimon\\gazou\\db_cache\\db_tiles\\db_104.png",
+      "feature_count": 302,
+      "image_file": "tiles/db_10_tile_4.png",
+      "feature_file": "features/db_10_tile_4.npz"
+    }
+  ],
+  "elapsed_seconds": 5.2668320999946445
+}

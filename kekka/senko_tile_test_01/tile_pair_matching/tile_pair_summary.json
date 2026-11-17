@@ -1,0 +1,13 @@
+{
+  "database_tiles": 40,
+  "query_tiles": 40,
+  "total_pairs": 1600,
+  "true_positive": 40,
+  "false_negative": 0,
+  "false_positive": 465,
+  "true_negative": 1095,
+  "feature_extraction_seconds": 11.961049799996545,
+  "matching_seconds": 27.728268400009256,
+  "elapsed_seconds": 39.6893182000058,
+  "feature_cache_used": true
+}

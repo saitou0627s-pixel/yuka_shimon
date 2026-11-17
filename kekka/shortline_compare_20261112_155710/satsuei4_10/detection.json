@@ -1,0 +1,305 @@
+{
+  "config": {
+    "max_side": 1280,
+    "min_length": 0.05,
+    "dark_difference": 3.0,
+    "line_support": 0.42,
+    "side_support": 0.4,
+    "angle_tolerance": 6.0,
+    "min_area": 0.008,
+    "max_area": 0.65,
+    "max_candidates": 6,
+    "seed": 0,
+    "clahe": false,
+    "clahe_clip_limit": 2.0,
+    "clahe_grid": 8,
+    "line_selection": "diverse",
+    "candidate_ranking": "large-clear",
+    "score_margin": 0.05
+  },
+  "source_shape_hw": [
+    5712,
+    4284
+  ],
+  "work_shape_hw": [
+    1280,
+    960
+  ],
+  "raw_segments": 3993,
+  "accepted_lines": 9,
+  "family_counts": [
+    5,
+    4
+  ],
+  "vanishing_points_homogeneous_work": [
+    [
+      0.2879205266779101,
+      -0.9576540319976176,
+      0.0007247870177395601
+    ],
+    [
+      -0.9982270397664373,
+      0.05952122935946816,
+      1.8294067671471005e-05
+    ]
+  ],
+  "candidates": [
+    {
+      "candidate": 1,
+      "detection_score": 0.951773475209872,
+      "score_rank": 1,
+      "area_work_px": 85205.47707222472,
+      "area_fraction": 0.06934039475278704,
+      "quad_original_xy": [
+        [
+          1014.1388053894043,
+          1645.9013637542723
+        ],
+        [
+          2347.0573768615723,
+          1574.7711456298828
+        ],
+        [
+          2436.29239654541,
+          2757.959550476074
+        ],
+        [
+          896.2909051895141,
+          2826.542433929443
+        ]
+      ],
+      "points_argument": "1014.14,1645.90;2347.06,1574.77;2436.29,2757.96;896.29,2826.54",
+      "side_support": [
+        0.9958333333333333,
+        0.9958333333333333,
+        0.9916666666666667,
+        1.0
+      ],
+      "estimated_band_offset_px": [
+        8.0,
+        8.0,
+        8.0,
+        12.0
+      ]
+    },
+    {
+      "candidate": 2,
+      "detection_score": 0.922929776410928,
+      "score_rank": 2,
+      "area_work_px": 57724.03004142037,
+      "area_fraction": 0.04697593590610381,
+      "quad_original_xy": [
+        [
+          2279.468096923828,
+          678.5851026535034
+        ],
+        [
+          3470.185063934326,
+          610.2804445266723
+        ],
+        [
+          3703.8572959899902,
+          1502.3665111541748
+        ],
+        [
+          2347.0573768615723,
+          1574.7711456298828
+        ]
+      ],
+      "points_argument": "2279.47,678.59;3470.19,610.28;3703.86,1502.37;2347.06,1574.77",
+      "side_support": [
+        0.9958333333333333,
+        0.966183574879227,
+        0.9916666666666667,
+        0.9900497512437811
+      ],
+      "estimated_band_offset_px": [
+        3.0,
+        8.0,
+        8.0,
+        12.0
+      ]
+    },
+    {
+      "candidate": 3,
+      "detection_score": 0.9122640840650303,
+      "score_rank": 3,
+      "area_work_px": 56521.120286668185,
+      "area_fraction": 0.0459970054416245,
+      "quad_original_xy": [
+        [
+          1103.9624153137206,
+          746.0172254562377
+        ],
+        [
+          2279.468096923828,
+          678.5851026535034
+        ],
+        [
+          2347.0573768615723,
+          1574.7711456298828
+        ],
+        [
+          1014.1388053894043,
+          1645.9013637542723
+        ]
+      ],
+      "points_argument": "1103.96,746.02;2279.47,678.59;2347.06,1574.77;1014.14,1645.90",
+      "side_support": [
+        0.9541666666666667,
+        0.9900497512437811,
+        0.9958333333333333,
+        0.9950738916256158
+      ],
+      "estimated_band_offset_px": [
+        8.0,
+        12.0,
+        8.0,
+        12.0
+      ]
+    },
+    {
+      "candidate": 4,
+      "detection_score": 0.6970747501651445,
+      "score_rank": 4,
+      "area_work_px": 137272.22206285456,
+      "area_fraction": 0.11171242029854701,
+      "quad_original_xy": [
+        [
+          896.2909051895141,
+          2826.542433929443
+        ],
+        [
+          2436.29239654541,
+          2757.959550476074
+        ],
+        [
+          2558.525511932373,
+          4378.680500793457
+        ],
+        [
+          733.5356941223145,
+          4457.081211090088
+        ]
+      ],
+      "points_argument": "896.29,2826.54;2436.29,2757.96;2558.53,4378.68;733.54,4457.08",
+      "side_support": [
+        0.9916666666666667,
+        0.6041666666666666,
+        0.9916666666666667,
+        0.9791666666666666
+      ],
+      "estimated_band_offset_px": [
+        8.0,
+        8.0,
+        12.0,
+        12.0
+      ]
+    },
+    {
+      "candidate": 5,
+      "detection_score": 0.6616541984291889,
+      "score_rank": 5,
+      "area_work_px": 33702.75866267405,
+      "area_fraction": 0.02742737521376469,
+      "quad_original_xy": [
+        [
+          400.0095090866089,
+          786.3989828109741
+        ],
+        [
+          1103.9624153137206,
+          746.0172254562377
+        ],
+        [
+          1014.1388053894043,
+          1645.9013637542723
+        ],
+        [
+          215.66483659744262,
+          1688.5113750457763
+        ]
+      ],
+      "points_argument": "400.01,786.40;1103.96,746.02;1014.14,1645.90;215.66,1688.51",
+      "side_support": [
+        0.5886075949367089,
+        0.9950738916256158,
+        0.9273743016759777,
+        0.9902912621359223
+      ],
+      "estimated_band_offset_px": [
+        8.0,
+        12.0,
+        12.0,
+        5.0
+      ]
+    }
+  ],
+  "preprocessing": {
+    "mode": "none",
+    "clip_limit": null,
+    "grid_size": null,
+    "scope": "detection_only",
+    "matching_uses_original_image": true
+  },
+  "line_selection": {
+    "mode": "diverse",
+    "evaluation_budget": 500,
+    "minimum_length_px": 48,
+    "evaluated_segments": 500,
+    "passed_band_filter": 71,
+    "sources": {
+      "hough": {
+        "raw": 3668,
+        "eligible": 3668,
+        "evaluated": 447
+      },
+      "lsd": {
+        "raw": 325,
+        "eligible": 53,
+        "evaluated": 53
+      }
+    },
+    "angle_bin_width_degrees": 10,
+    "evaluated_angle_histogram": [
+      25,
+      25,
+      25,
+      25,
+      25,
+      25,
+      25,
+      32,
+      36,
+      30,
+      31,
+      25,
+      25,
+      25,
+      25,
+      25,
+      24,
+      47
+    ]
+  },
+  "candidate_ranking": {
+    "mode": "large-clear",
+    "scope": "existing_detected_candidates_only",
+    "score_margin": 0.05,
+    "top_detection_score": 0.951773475209872,
+    "quality_cutoff": 0.9017734752098719,
+    "quality_eligible_count": 3,
+    "selected_score_rank": 1,
+    "selected_area_fraction": 0.06934039475278704
+  },
+  "timings_seconds": {
+    "resize_gray_and_preprocessing": 0.01059450000320794,
+    "clahe": 0.0,
+    "line_extraction": 0.7754715999981272,
+    "vanishing_point_classification": 0.012406699999701232,
+    "candidate_evaluation": 0.017963300000701565,
+    "detection_total": 0.8164361000017379
+  },
+  "selected_candidate": 1,
+  "warning": "検出スコアは照合の一致割合・確率ではありません。目視確認が必要です。"
+}

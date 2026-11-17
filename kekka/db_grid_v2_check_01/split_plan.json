@@ -1,0 +1,1388 @@
+{
+  "method": "registration-visible-three-by-three-grout-grid-v2",
+  "created_at": "2026-11-05T21:19:17.658482",
+  "dependencies_sha256": {
+    "step4_auto_grout": "b41b546e18b7af8218c9fb4df27f3432c28b6f0ff7c414fe3027e45fb97577a1",
+    "step4_teian_grout": "197125f9f8a8c2cefbfc1de7b97e1c2544c2bd294502f87d04ebbef387514b6a",
+    "step3_senko_saigen": "1b88974af4cdd9da6696158c349a1e4b5a4aeb07d3f90c1f4a5eee4f7dec24f7",
+    "step4_teian": "03af5fb0e506c762ebc2b1f492c6357900331c67cb1f3384b3a69e89fda4eb32",
+    "builder": "4c4b4de9e0e8822a3226be4830c8452ac9c1cc23b5c7d56d22300fabd3b034ce"
+  },
+  "images": [
+    {
+      "location": 1,
+      "source_image": "C:\\Users\\saitoukakeru\\OneDrive\\デスクトップ\\yuka_shimon\\gazou\\db_retake10_02\\db_01.png",
+      "source_sha256": "264e70fe73ca3c2daaeffd450a21795b07e4a498c8197bce3cb54d7c690bbd3b",
+      "status": "failed",
+      "reason": "目地を確認できません：左外周・右外周・上外周・下外周。画像端では代用しません。",
+      "split": {
+        "method": "registration-visible-three-by-three-grout-grid-v2",
+        "settings": {
+          "max_side": 640,
+          "dark_difference": 3.0,
+          "support": 0.42,
+          "continuity": 0.66,
+          "visible_fraction": 0.55,
+          "max_axis_angle": 25.0,
+          "max_family_angle": 12.0,
+          "max_spacing_ratio": 1.8,
+          "ambiguity_score_gap": 0.015
+        },
+        "detection_size": [
+          640,
+          640
+        ],
+        "vertical_candidates": [
+          [],
+          [
+            {
+              "score": 0.9999999999999999,
+              "support": 1.0,
+              "continuity": 1.0,
+              "strength": 23.81388282775879,
+              "width": 3.0,
+              "visible_fraction": 1.0,
+              "p": [
+                319.30926968384676,
+                0.0
+              ],
+              "q": [
+                323.8809705084549,
+                639.0
+              ],
+              "position": 321.5951200961508,
+              "line": [
+                -0.9999744078236225,
+                0.007154278286125613,
+                319.301097864698
+              ],
+              "axis_angle": 0.40991344812213976
+            }
+          ],
+          []
+        ],
+        "horizontal_candidates": [
+          [],
+          [
+            {
+              "score": 0.9999999999999999,
+              "support": 1.0,
+              "continuity": 1.0,
+              "strength": 24.91064453125,
+              "width": 5.0,
+              "visible_fraction": 1.0,
+              "p": [
+                0.0,
+                314.3905139924989
+              ],
+              "q": [
+                639.0,
+                312.7335361704568
+              ],
+              "position": 313.5620250814778,
+              "line": [
+                0.002593070815743097,
+                0.9999966379862207,
+                -314.3894570072588
+              ],
+              "axis_angle": -0.1485721802212347
+            }
+          ],
+          []
+        ]
+      }
+    },
+    {
+      "location": 2,
+      "source_image": "C:\\Users\\saitoukakeru\\OneDrive\\デスクトップ\\yuka_shimon\\gazou\\db_retake10_02\\db_02.png",
+      "source_sha256": "620a1c0f18494dd30b13efdd15e8f9bdb2b7bbf72aef176a975912c46b90d13c",
+      "status": "failed",
+      "reason": "目地を確認できません：左外周・右外周・上外周・下外周。画像端では代用しません。",
+      "split": {
+        "method": "registration-visible-three-by-three-grout-grid-v2",
+        "settings": {
+          "max_side": 640,
+          "dark_difference": 3.0,
+          "support": 0.42,
+          "continuity": 0.66,
+          "visible_fraction": 0.55,
+          "max_axis_angle": 25.0,
+          "max_family_angle": 12.0,
+          "max_spacing_ratio": 1.8,
+          "ambiguity_score_gap": 0.015
+        },
+        "detection_size": [
+          640,
+          640
+        ],
+        "vertical_candidates": [
+          [],
+          [
+            {
+              "score": 0.9918662579854328,
+              "support": 0.9958333333333333,
+              "continuity": 1.0,
+              "strength": 18.956584930419922,
+              "width": 8.0,
+              "visible_fraction": 1.0,
+              "p": [
+                324.05919750085627,
+                0.0
+              ],
+              "q": [
+                325.84811833671176,
+                639.0
+              ],
+              "position": 324.953657918784,
+              "line": [
+                -0.9999960812461942,
+                0.002799552152605882,
+                324.0579275926428
+              ],
+              "axis_angle": 0.16040273239740904
+            }
+          ],
+          []
+        ],
+        "horizontal_candidates": [
+          [],
+          [
+            {
+              "score": 0.9932070732116698,
+              "support": 1.0,
+              "continuity": 1.0,
+              "strength": 18.641414642333984,
+              "width": 8.0,
+              "visible_fraction": 1.0,
+              "p": [
+                0.0,
+                313.46310215673117
+              ],
+              "q": [
+                639.0,
+                310.8442496977148
+              ],
+              "position": 312.153675927223,
+              "line": [
+                0.0040983262369907675,
+                0.9999916018257629,
+                -313.4604696389823
+              ],
+              "axis_angle": -0.23481745379363503
+            }
+          ],
+          []
+        ]
+      }
+    },
+    {
+      "location": 3,
+      "source_image": "C:\\Users\\saitoukakeru\\OneDrive\\デスクトップ\\yuka_shimon\\gazou\\db_retake10_02\\db_03.png",
+      "source_sha256": "0210c31aea0a4b542c40d72f90fbe384dfcf761bf8f6ba6398273a6375bfc445",
+      "status": "failed",
+      "reason": "目地を確認できません：左外周・右外周・下外周。画像端では代用しません。",
+      "split": {
+        "method": "registration-visible-three-by-three-grout-grid-v2",
+        "settings": {
+          "max_side": 640,
+          "dark_difference": 3.0,
+          "support": 0.42,
+          "continuity": 0.66,
+          "visible_fraction": 0.55,
+          "max_axis_angle": 25.0,
+          "max_family_angle": 12.0,
+          "max_spacing_ratio": 1.8,
+          "ambiguity_score_gap": 0.015
+        },
+        "detection_size": [
+          640,
+          640
+        ],
+        "vertical_candidates": [
+          [],
+          [
+            {
+              "score": 0.9959249814351399,
+              "support": 0.9958333333333333,
+              "continuity": 1.0,
+              "strength": 19.768329620361328,
+              "width": 12.0,
+              "visible_fraction": 1.0,
+              "p": [
+                323.070796460177,
+                0.0
+              ],
+              "q": [
+                320.41592920353986,
+                639.0
+              ],
+              "position": 321.74336283185846,
+              "line": [
+                -0.9999913692549462,
+                -0.004154685983027704,
+                323.0680081184985
+              ],
+              "axis_angle": -0.2380466568700452
+            },
+            {
+              "score": 0.5150998473167419,
+              "support": 0.49166666666666664,
+              "continuity": 0.6666666666666666,
+              "strength": 7.519969463348389,
+              "width": 12.0,
+              "visible_fraction": 1.0,
+              "p": [
+                320.99999999999994,
+                0.0
+              ],
+              "q": [
+                334.89130434782606,
+                639.0
+              ],
+              "position": 327.945652173913,
+              "line": [
+                -0.9997637888239164,
+                0.021733995409215626,
+                320.9241762124771
+              ],
+              "axis_angle": 1.2453642667683507
+            }
+          ],
+          []
+        ],
+        "horizontal_candidates": [
+          [
+            {
+              "score": 0.7746011036320736,
+              "support": 0.8345864661654135,
+              "continuity": 0.75,
+              "strength": 8.078115463256836,
+              "width": 3.0,
+              "visible_fraction": 0.5541666666666667,
+              "p": [
+                0.0,
+                1.183673469387755
+              ],
+              "q": [
+                639.0,
+                5.224489795918368
+              ],
+              "position": 3.2040816326530615,
+              "line": [
+                -0.006323529789676274,
+                0.9999800062856252,
+                -1.1836498033584952
+              ],
+              "axis_angle": 0.3623139832443498
+            }
+          ],
+          [
+            {
+              "score": 0.9830541419982911,
+              "support": 0.9875,
+              "continuity": 1.0,
+              "strength": 18.360828399658203,
+              "width": 12.0,
+              "visible_fraction": 1.0,
+              "p": [
+                0.0,
+                308.54065076048846
+              ],
+              "q": [
+                639.0,
+                312.82490620228356
+              ],
+              "position": 310.682778481386,
+              "line": [
+                -0.006704474416464497,
+                0.9999775247588313,
+                -308.53371623495224
+              ],
+              "axis_angle": 0.38414096580811297
+            }
+          ],
+          []
+        ]
+      }
+    },
+    {
+      "location": 4,
+      "source_image": "C:\\Users\\saitoukakeru\\OneDrive\\デスクトップ\\yuka_shimon\\gazou\\db_retake10_02\\db_04.png",
+      "source_sha256": "44e4da87de15a66829f00ab8ef4a79e0f20595db3f08c9f467ed1f66515febc4",
+      "status": "failed",
+      "reason": "目地を確認できません：左外周・右外周・上外周・下外周。画像端では代用しません。",
+      "split": {
+        "method": "registration-visible-three-by-three-grout-grid-v2",
+        "settings": {
+          "max_side": 640,
+          "dark_difference": 3.0,
+          "support": 0.42,
+          "continuity": 0.66,
+          "visible_fraction": 0.55,
+          "max_axis_angle": 25.0,
+          "max_family_angle": 12.0,
+          "max_spacing_ratio": 1.8,
+          "ambiguity_score_gap": 0.015
+        },
+        "detection_size": [
+          640,
+          640
+        ],
+        "vertical_candidates": [
+          [],
+          [
+            {
+              "score": 0.8641777054468791,
+              "support": 0.8791666666666667,
+              "continuity": 1.0,
+              "strength": 9.75220775604248,
+              "width": 12.0,
+              "visible_fraction": 1.0,
+              "p": [
+                312.1941711388038,
+                0.0
+              ],
+              "q": [
+                317.8952195025301,
+                639.0
+              ],
+              "position": 315.04469532066696,
+              "line": [
+                -0.9999602028646194,
+                0.008921473362023051,
+                312.18174670510996
+              ],
+              "axis_angle": 0.5111695517282521
+            }
+          ],
+          []
+        ],
+        "horizontal_candidates": [
+          [],
+          [
+            {
+              "score": 0.9439092493057252,
+              "support": 0.9625,
+              "continuity": 1.0,
+              "strength": 14.03184986114502,
+              "width": 8.0,
+              "visible_fraction": 1.0,
+              "p": [
+                0.0,
+                320.8886447377533
+              ],
+              "q": [
+                639.0,
+                314.7111002671671
+              ],
+              "position": 317.7998725024602,
+              "line": [
+                0.009667066997386146,
+                0.9999532728161192,
+                -320.87365051504537
+              ],
+              "axis_angle": -0.5538907664992055
+            },
+            {
+              "score": 0.5644877552986144,
+              "support": 0.5666666666666667,
+              "continuity": 0.6666666666666666,
+              "strength": 6.8975510597229,
+              "width": 12.0,
+              "visible_fraction": 1.0,
+              "p": [
+                0.0,
+                323.11111111111114
+              ],
+              "q": [
+                639.0,
+                302.44444444444446
+              ],
+              "position": 312.7777777777778,
+              "line": [
+                0.03232529935277612,
+                0.9994774009559964,
+                -322.94225355333754
+              ],
+              "axis_angle": -1.8524259276613062
+            }
+          ],
+          []
+        ]
+      }
+    },
+    {
+      "location": 5,
+      "source_image": "C:\\Users\\saitoukakeru\\OneDrive\\デスクトップ\\yuka_shimon\\gazou\\db_retake10_02\\db_05.png",
+      "source_sha256": "951086c751ab6ef78c8f59ed1a8eff25e14986c6ac6573bfdddc5e56321eddc9",
+      "status": "failed",
+      "reason": "目地を確認できません：左外周・右外周・上外周。画像端では代用しません。",
+      "split": {
+        "method": "registration-visible-three-by-three-grout-grid-v2",
+        "settings": {
+          "max_side": 640,
+          "dark_difference": 3.0,
+          "support": 0.42,
+          "continuity": 0.66,
+          "visible_fraction": 0.55,
+          "max_axis_angle": 25.0,
+          "max_family_angle": 12.0,
+          "max_spacing_ratio": 1.8,
+          "ambiguity_score_gap": 0.015
+        },
+        "detection_size": [
+          640,
+          640
+        ],
+        "vertical_candidates": [
+          [],
+          [
+            {
+              "score": 0.859735385576884,
+              "support": 0.8791666666666667,
+              "continuity": 1.0,
+              "strength": 8.863743782043457,
+              "width": 5.0,
+              "visible_fraction": 1.0,
+              "p": [
+                320.57894736842104,
+                0.0
+              ],
+              "q": [
+                315.36842105263156,
+                639.0
+              ],
+              "position": 317.9736842105263,
+              "line": [
+                -0.9999667562644774,
+                -0.008153917211941634,
+                320.5682901266806
+              ],
+              "axis_angle": -0.46719021980417713
+            }
+          ],
+          []
+        ],
+        "horizontal_candidates": [
+          [],
+          [
+            {
+              "score": 0.9339530642827353,
+              "support": 0.9708333333333333,
+              "continuity": 1.0,
+              "strength": 10.873946189880371,
+              "width": 8.0,
+              "visible_fraction": 1.0,
+              "p": [
+                0.0,
+                312.1541386213356
+              ],
+              "q": [
+                639.0,
+                316.41205836401036
+              ],
+              "position": 314.283098492673,
+              "line": [
+                -0.006663263251599264,
+                0.9999778002150047,
+                -312.14720886657284
+              ],
+              "axis_angle": 0.3817796872477608
+            }
+          ],
+          [
+            {
+              "score": 0.5659682168131289,
+              "support": 0.5652173913043478,
+              "continuity": 0.75,
+              "strength": 4.06320858001709,
+              "width": 3.0,
+              "visible_fraction": 0.6708333333333333,
+              "p": [
+                0.0,
+                632.0
+              ],
+              "q": [
+                639.0,
+                638.0
+              ],
+              "position": 635.0,
+              "line": [
+                -0.009389257464324965,
+                0.9999559199506088,
+                -631.9721414087849
+              ],
+              "axis_angle": 0.5379727301122598
+            }
+          ]
+        ]
+      }
+    },
+    {
+      "location": 6,
+      "source_image": "C:\\Users\\saitoukakeru\\OneDrive\\デスクトップ\\yuka_shimon\\gazou\\db_retake10_02\\db_06.png",
+      "source_sha256": "63875a09caeef89ab99c274d13e8dd16ee99205e12baa06b41e0aa4dab52a496",
+      "status": "failed",
+      "reason": "目地を確認できません：右外周・上外周・下外周。画像端では代用しません。",
+      "split": {
+        "method": "registration-visible-three-by-three-grout-grid-v2",
+        "settings": {
+          "max_side": 640,
+          "dark_difference": 3.0,
+          "support": 0.42,
+          "continuity": 0.66,
+          "visible_fraction": 0.55,
+          "max_axis_angle": 25.0,
+          "max_family_angle": 12.0,
+          "max_spacing_ratio": 1.8,
+          "ambiguity_score_gap": 0.015
+        },
+        "detection_size": [
+          640,
+          640
+        ],
+        "vertical_candidates": [
+          [
+            {
+              "score": 0.635023735576952,
+              "support": 0.5915492957746479,
+              "continuity": 1.0,
+              "strength": 4.187845706939697,
+              "width": 5.0,
+              "visible_fraction": 0.5916666666666667,
+              "p": [
+                27.646153846153847,
+                0.0
+              ],
+              "q": [
+                -10.846153846153847,
+                639.0
+              ],
+              "position": 8.4,
+              "line": [
+                -0.9981905932062096,
+                -0.060129357510579906,
+                27.596130707562445
+              ],
+              "axis_angle": -3.4472378129392074
+            }
+          ],
+          [
+            {
+              "score": 0.8181397541364035,
+              "support": 0.8333333333333334,
+              "continuity": 1.0,
+              "strength": 6.961284160614014,
+              "width": 5.0,
+              "visible_fraction": 1.0,
+              "p": [
+                331.88588822517147,
+                0.0
+              ],
+              "q": [
+                314.1268224262731,
+                639.0
+              ],
+              "position": 323.0063553257223,
+              "line": [
+                -0.9996140269114848,
+                -0.027781238305825982,
+                331.7577892038586
+              ],
+              "axis_angle": -1.5919525267862529
+            }
+          ],
+          []
+        ],
+        "horizontal_candidates": [
+          [],
+          [
+            {
+              "score": 0.8792281405131023,
+              "support": 0.9041666666666667,
+              "continuity": 1.0,
+              "strength": 9.26229476928711,
+              "width": 12.0,
+              "visible_fraction": 1.0,
+              "p": [
+                0.0,
+                301.28782001727546
+              ],
+              "q": [
+                639.0,
+                316.38230820625176
+              ],
+              "position": 308.8350641117636,
+              "line": [
+                -0.023615459436606916,
+                0.999721116149698,
+                -301.20379570998
+              ],
+              "axis_angle": 1.3531919537796833
+            },
+            {
+              "score": 0.5602954252560933,
+              "support": 0.48333333333333334,
+              "continuity": 1.0,
+              "strength": 4.392418384552002,
+              "width": 12.0,
+              "visible_fraction": 1.0,
+              "p": [
+                0.0,
+                308.0
+              ],
+              "q": [
+                639.0,
+                314.0
+              ],
+              "position": 311.0,
+              "line": [
+                -0.009389257464324965,
+                0.9999559199506088,
+                -307.9864233447875
+              ],
+              "axis_angle": 0.5379727301122598
+            }
+          ],
+          []
+        ]
+      }
+    },
+    {
+      "location": 7,
+      "source_image": "C:\\Users\\saitoukakeru\\OneDrive\\デスクトップ\\yuka_shimon\\gazou\\db_retake10_02\\db_07.png",
+      "source_sha256": "00af806e500e19654513b9fc43b076ec037dc8558f1d82ff32afd82b4762b77f",
+      "status": "failed",
+      "reason": "目地を確認できません：左外周・右外周・上外周・下外周。画像端では代用しません。",
+      "split": {
+        "method": "registration-visible-three-by-three-grout-grid-v2",
+        "settings": {
+          "max_side": 640,
+          "dark_difference": 3.0,
+          "support": 0.42,
+          "continuity": 0.66,
+          "visible_fraction": 0.55,
+          "max_axis_angle": 25.0,
+          "max_family_angle": 12.0,
+          "max_spacing_ratio": 1.8,
+          "ambiguity_score_gap": 0.015
+        },
+        "detection_size": [
+          640,
+          640
+        ],
+        "vertical_candidates": [
+          [],
+          [
+            {
+              "score": 0.9055549399058024,
+              "support": 0.9416666666666667,
+              "continuity": 1.0,
+              "strength": 9.277654647827148,
+              "width": 5.0,
+              "visible_fraction": 1.0,
+              "p": [
+                314.8235835354103,
+                0.0
+              ],
+              "q": [
+                322.7561607642686,
+                639.0
+              ],
+              "position": 318.7898721498394,
+              "line": [
+                -0.9999229546002137,
+                0.01241309242609446,
+                314.7993278265547
+              ],
+              "axis_angle": 0.7112360726373615
+            }
+          ],
+          []
+        ],
+        "horizontal_candidates": [
+          [],
+          [
+            {
+              "score": 0.8251533691088357,
+              "support": 0.8416666666666667,
+              "continuity": 1.0,
+              "strength": 7.197340488433838,
+              "width": 12.0,
+              "visible_fraction": 1.0,
+              "p": [
+                0.0,
+                316.27906976744185
+              ],
+              "q": [
+                639.0,
+                310.4186046511628
+              ],
+              "position": 313.34883720930236,
+              "line": [
+                0.009170921223090557,
+                0.9999579462176996,
+                -316.2657690362957
+              ],
+              "axis_angle": -0.5254624462451354
+            }
+          ],
+          []
+        ]
+      }
+    },
+    {
+      "location": 8,
+      "source_image": "C:\\Users\\saitoukakeru\\OneDrive\\デスクトップ\\yuka_shimon\\gazou\\db_retake10_02\\db_08.png",
+      "source_sha256": "7e6d681bf3be5509a0a60c67a0cabc209706fe80b4ebc613bebe5d1d2e2db388",
+      "status": "failed",
+      "reason": "目地を確認できません：左外周・右外周・下外周。画像端では代用しません。",
+      "split": {
+        "method": "registration-visible-three-by-three-grout-grid-v2",
+        "settings": {
+          "max_side": 640,
+          "dark_difference": 3.0,
+          "support": 0.42,
+          "continuity": 0.66,
+          "visible_fraction": 0.55,
+          "max_axis_angle": 25.0,
+          "max_family_angle": 12.0,
+          "max_spacing_ratio": 1.8,
+          "ambiguity_score_gap": 0.015
+        },
+        "detection_size": [
+          640,
+          640
+        ],
+        "vertical_candidates": [
+          [],
+          [
+            {
+              "score": 0.7395077157020569,
+              "support": 0.725,
+              "continuity": 1.0,
+              "strength": 6.401543140411377,
+              "width": 3.0,
+              "visible_fraction": 1.0,
+              "p": [
+                315.25355832130043,
+                0.0
+              ],
+              "q": [
+                319.7535583213004,
+                639.0
+              ],
+              "position": 317.5035583213004,
+              "line": [
+                -0.999975204254946,
+                0.007042078903203756,
+                315.2457413744409
+              ],
+              "axis_angle": 0.403484735058745
+            }
+          ],
+          []
+        ],
+        "horizontal_candidates": [
+          [
+            {
+              "score": 0.6694755654335021,
+              "support": 0.64,
+              "continuity": 1.0,
+              "strength": 4.2951130867004395,
+              "width": 3.0,
+              "visible_fraction": 0.625,
+              "p": [
+                0.0,
+                13.05648141011668
+              ],
+              "q": [
+                639.0,
+                -3.120733779756735
+              ],
+              "position": 4.967873815179972,
+              "line": [
+                0.02530834664548323,
+                0.9996796924965877,
+                -13.052299321152859
+              ],
+              "axis_angle": -1.450216290933428
+            }
+          ],
+          [
+            {
+              "score": 0.8448202006022135,
+              "support": 0.8666666666666667,
+              "continuity": 1.0,
+              "strength": 7.630706787109375,
+              "width": 8.0,
+              "visible_fraction": 1.0,
+              "p": [
+                0.0,
+                321.7119182696449
+              ],
+              "q": [
+                639.0,
+                313.2966640323568
+              ],
+              "position": 317.50429115100087,
+              "line": [
+                0.013168270092444015,
+                0.9999132945724706,
+                -321.68402410023003
+              ],
+              "axis_angle": -0.7545081065607594
+            }
+          ],
+          []
+        ]
+      }
+    },
+    {
+      "location": 9,
+      "source_image": "C:\\Users\\saitoukakeru\\OneDrive\\デスクトップ\\yuka_shimon\\gazou\\db_retake10_02\\db_09.png",
+      "source_sha256": "cbf4881c22703d27cfb473218d8327aca300f46f244e0cffaf0ba420f6a228fc",
+      "status": "failed",
+      "reason": "目地を確認できません：左外周・右外周・上外周・下外周。画像端では代用しません。",
+      "split": {
+        "method": "registration-visible-three-by-three-grout-grid-v2",
+        "settings": {
+          "max_side": 640,
+          "dark_difference": 3.0,
+          "support": 0.42,
+          "continuity": 0.66,
+          "visible_fraction": 0.55,
+          "max_axis_angle": 25.0,
+          "max_family_angle": 12.0,
+          "max_spacing_ratio": 1.8,
+          "ambiguity_score_gap": 0.015
+        },
+        "detection_size": [
+          640,
+          640
+        ],
+        "vertical_candidates": [
+          [],
+          [
+            {
+              "score": 0.8130680386225383,
+              "support": 0.8291666666666667,
+              "continuity": 1.0,
+              "strength": 6.530274391174316,
+              "width": 12.0,
+              "visible_fraction": 1.0,
+              "p": [
+                320.48029561945486,
+                0.0
+              ],
+              "q": [
+                324.6842429878759,
+                639.0
+              ],
+              "position": 322.5822693036654,
+              "line": [
+                -0.9999783594282535,
+                0.006578804996238491,
+                320.47336024262415
+              ],
+              "axis_angle": 0.3769404795971321
+            }
+          ],
+          []
+        ],
+        "horizontal_candidates": [
+          [],
+          [
+            {
+              "score": 0.7752777091662089,
+              "support": 0.7791666666666667,
+              "continuity": 1.0,
+              "strength": 5.972208499908447,
+              "width": 5.0,
+              "visible_fraction": 1.0,
+              "p": [
+                0.0,
+                319.5
+              ],
+              "q": [
+                639.0,
+                313.5
+              ],
+              "position": 316.5,
+              "line": [
+                0.009389257464324965,
+                0.9999559199506088,
+                -319.4859164242195
+              ],
+              "axis_angle": -0.5379727301122598
+            }
+          ],
+          []
+        ]
+      }
+    },
+    {
+      "location": 10,
+      "source_image": "C:\\Users\\saitoukakeru\\OneDrive\\デスクトップ\\yuka_shimon\\gazou\\db_retake10_02\\db_10.jpg",
+      "source_sha256": "6f2061292a5998575092ad873e78eacdf1fd448d74b7b55988b673d242cb2c66",
+      "status": "detected",
+      "quads": [
+        [
+          [
+            22.716676712036133,
+            13.440793991088867
+          ],
+          [
+            467.62127685546875,
+            10.33017349243164
+          ],
+          [
+            469.7500915527344,
+            456.5871887207031
+          ],
+          [
+            18.074092864990234,
+            461.36376953125
+          ]
+        ],
+        [
+          [
+            467.62127685546875,
+            10.33017349243164
+          ],
+          [
+            921.2078857421875,
+            7.158851623535156
+          ],
+          [
+            928.8383178710938,
+            451.7322692871094
+          ],
+          [
+            469.7500915527344,
+            456.5871887207031
+          ]
+        ],
+        [
+          [
+            18.074092864990234,
+            461.36376953125
+          ],
+          [
+            469.7500915527344,
+            456.5871887207031
+          ],
+          [
+            471.95794677734375,
+            919.4053955078125
+          ],
+          [
+            13.326629638671875,
+            919.4053955078125
+          ]
+        ],
+        [
+          [
+            469.7500915527344,
+            456.5871887207031
+          ],
+          [
+            928.8383178710938,
+            451.7322692871094
+          ],
+          [
+            936.8652954101562,
+            919.4053955078125
+          ],
+          [
+            471.95794677734375,
+            919.4053955078125
+          ]
+        ]
+      ],
+      "split": {
+        "method": "registration-visible-three-by-three-grout-grid-v2",
+        "settings": {
+          "max_side": 640,
+          "dark_difference": 3.0,
+          "support": 0.42,
+          "continuity": 0.66,
+          "visible_fraction": 0.55,
+          "max_axis_angle": 25.0,
+          "max_family_angle": 12.0,
+          "max_spacing_ratio": 1.8,
+          "ambiguity_score_gap": 0.015
+        },
+        "detection_size": [
+          640,
+          630
+        ],
+        "vertical_candidates": [
+          [
+            {
+              "score": 0.9248724778493246,
+              "support": 0.9583333333333334,
+              "continuity": 1.0,
+              "strength": 10.807828903198242,
+              "width": 3.0,
+              "visible_fraction": 1.0,
+              "p": [
+                15.422360329658924,
+                0.0
+              ],
+              "q": [
+                8.904225614633017,
+                629.0
+              ],
+              "position": 12.163292972145971,
+              "line": [
+                -0.9999463116073918,
+                -0.01036213794411805,
+                15.4215323279226
+              ],
+              "axis_angle": -0.5937173962125847
+            }
+          ],
+          [
+            {
+              "score": 0.9018594964345296,
+              "support": 0.9208333333333333,
+              "continuity": 1.0,
+              "strength": 11.455232620239258,
+              "width": 8.0,
+              "visible_fraction": 1.0,
+              "p": [
+                315.5,
+                0.0
+              ],
+              "q": [
+                318.5,
+                629.0
+              ],
+              "position": 317.0,
+              "line": [
+                -0.9999886262464525,
+                0.004769421110873382,
+                315.49641158075576
+              ],
+              "axis_angle": 0.27326873640484706
+            }
+          ],
+          [
+            {
+              "score": 0.691201974550883,
+              "support": 0.6416666666666667,
+              "continuity": 1.0,
+              "strength": 8.407061576843262,
+              "width": 5.0,
+              "visible_fraction": 1.0,
+              "p": [
+                621.5135185392859,
+                0.0
+              ],
+              "q": [
+                632.3073781884086,
+                629.0
+              ],
+              "position": 626.9104483638473,
+              "line": [
+                -0.9998527937185188,
+                0.01715782309249755,
+                621.4220278453313
+              ],
+              "axis_angle": 0.9831190897407995
+            },
+            {
+              "score": 0.5340929257168489,
+              "support": 0.4411764705882353,
+              "continuity": 1.0,
+              "strength": 5.053879261016846,
+              "width": 8.0,
+              "visible_fraction": 0.5666666666666667,
+              "p": [
+                621.1684210526316,
+                0.0
+              ],
+              "q": [
+                638.6526315789473,
+                629.0
+              ],
+              "position": 629.9105263157894,
+              "line": [
+                -0.9996138916586957,
+                0.027786104494102303,
+                620.9285827439085
+              ],
+              "axis_angle": 1.5922314465111715
+            }
+          ]
+        ],
+        "horizontal_candidates": [
+          [
+            {
+              "score": 0.7555154162959049,
+              "support": 0.7368421052631579,
+              "continuity": 1.0,
+              "strength": 7.945188522338867,
+              "width": 5.0,
+              "visible_fraction": 0.95,
+              "p": [
+                0.0,
+                9.178285002159955
+              ],
+              "q": [
+                639.0,
+                4.709753533628484
+              ],
+              "position": 6.94401926789422,
+              "line": [
+                0.0069928360127506604,
+                0.9999755498233439,
+                -9.17806059147025
+              ],
+              "axis_angle": -0.40066325579215417
+            }
+          ],
+          [
+            {
+              "score": 0.8255367231369017,
+              "support": 0.825,
+              "continuity": 1.0,
+              "strength": 9.607344627380371,
+              "width": 12.0,
+              "visible_fraction": 1.0,
+              "p": [
+                0.0,
+                311.5000259513326
+              ],
+              "q": [
+                639.0,
+                304.7412024219208
+              ],
+              "position": 308.12061418662665,
+              "line": [
+                0.010576596999930781,
+                0.9999440662336575,
+                -311.48260258166533
+              ],
+              "axis_angle": -0.6060056684753821
+            }
+          ],
+          [
+            {
+              "score": 0.84552459081014,
+              "support": 0.8583333333333333,
+              "continuity": 1.0,
+              "strength": 8.938251495361328,
+              "width": 5.0,
+              "visible_fraction": 1.0,
+              "p": [
+                0.0,
+                620.5
+              ],
+              "q": [
+                639.0,
+                620.5
+              ],
+              "position": 620.5,
+              "line": [
+                0.0,
+                1.0,
+                -620.5
+              ],
+              "axis_angle": 0.0
+            }
+          ]
+        ],
+        "score": 0.8240851131796139,
+        "selected_vertical": [
+          {
+            "score": 0.9248724778493246,
+            "support": 0.9583333333333334,
+            "continuity": 1.0,
+            "strength": 10.807828903198242,
+            "width": 3.0,
+            "visible_fraction": 1.0,
+            "p": [
+              15.422360329658924,
+              0.0
+            ],
+            "q": [
+              8.904225614633017,
+              629.0
+            ],
+            "position": 12.163292972145971,
+            "line": [
+              -0.9999463116073918,
+              -0.01036213794411805,
+              15.4215323279226
+            ],
+            "axis_angle": -0.5937173962125847
+          },
+          {
+            "score": 0.9018594964345296,
+            "support": 0.9208333333333333,
+            "continuity": 1.0,
+            "strength": 11.455232620239258,
+            "width": 8.0,
+            "visible_fraction": 1.0,
+            "p": [
+              315.5,
+              0.0
+            ],
+            "q": [
+              318.5,
+              629.0
+            ],
+            "position": 317.0,
+            "line": [
+              -0.9999886262464525,
+              0.004769421110873382,
+              315.49641158075576
+            ],
+            "axis_angle": 0.27326873640484706
+          },
+          {
+            "score": 0.691201974550883,
+            "support": 0.6416666666666667,
+            "continuity": 1.0,
+            "strength": 8.407061576843262,
+            "width": 5.0,
+            "visible_fraction": 1.0,
+            "p": [
+              621.5135185392859,
+              0.0
+            ],
+            "q": [
+              632.3073781884086,
+              629.0
+            ],
+            "position": 626.9104483638473,
+            "line": [
+              -0.9998527937185188,
+              0.01715782309249755,
+              621.4220278453313
+            ],
+            "axis_angle": 0.9831190897407995
+          }
+        ],
+        "selected_horizontal": [
+          {
+            "score": 0.7555154162959049,
+            "support": 0.7368421052631579,
+            "continuity": 1.0,
+            "strength": 7.945188522338867,
+            "width": 5.0,
+            "visible_fraction": 0.95,
+            "p": [
+              0.0,
+              9.178285002159955
+            ],
+            "q": [
+              639.0,
+              4.709753533628484
+            ],
+            "position": 6.94401926789422,
+            "line": [
+              0.0069928360127506604,
+              0.9999755498233439,
+              -9.17806059147025
+            ],
+            "axis_angle": -0.40066325579215417
+          },
+          {
+            "score": 0.8255367231369017,
+            "support": 0.825,
+            "continuity": 1.0,
+            "strength": 9.607344627380371,
+            "width": 12.0,
+            "visible_fraction": 1.0,
+            "p": [
+              0.0,
+              311.5000259513326
+            ],
+            "q": [
+              639.0,
+              304.7412024219208
+            ],
+            "position": 308.12061418662665,
+            "line": [
+              0.010576596999930781,
+              0.9999440662336575,
+              -311.48260258166533
+            ],
+            "axis_angle": -0.6060056684753821
+          },
+          {
+            "score": 0.84552459081014,
+            "support": 0.8583333333333333,
+            "continuity": 1.0,
+            "strength": 8.938251495361328,
+            "width": 5.0,
+            "visible_fraction": 1.0,
+            "p": [
+              0.0,
+              620.5
+            ],
+            "q": [
+              639.0,
+              620.5
+            ],
+            "position": 620.5,
+            "line": [
+              0.0,
+              1.0,
+              -620.5
+            ],
+            "axis_angle": 0.0
+          }
+        ],
+        "intersections_original": [
+          [
+            [
+              22.71667690903928,
+              13.440793636303827
+            ],
+            [
+              467.62128506990297,
+              10.330173674372686
+            ],
+            [
+              921.2078630092185,
+              7.158851523467581
+            ]
+          ],
+          [
+            [
+              18.074091968028945,
+              461.3637559463186
+            ],
+            [
+              469.75008161900007,
+              456.58719915198975
+            ],
+            [
+              928.8383157697269,
+              451.732278845079
+            ]
+          ],
+          [
+            [
+              13.326629514798686,
+              919.4054054054054
+            ],
+            [
+              471.9579352198259,
+              919.4054054054054
+            ],
+            [
+              936.8653201489755,
+              919.4054054054054
+            ]
+          ]
+        ],
+        "outer_boundary": "detected grout only"
+      }
+    }
+  ]
+}

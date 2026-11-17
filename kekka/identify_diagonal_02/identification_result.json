@@ -1,0 +1,100 @@
+{
+  "query_image": "C:\\Users\\saitoukakeru\\OneDrive\\デスクトップ\\yuka_shimon\\gazou\\satsuei\\diagonal_angle_2.jpg",
+  "database_cache": "C:\\Users\\saitoukakeru\\OneDrive\\デスクトップ\\yuka_shimon\\gazou\\db_cache",
+  "database_source_images": 10,
+  "database_tiles": 40,
+  "query_photos": 1,
+  "query_tiles": 4,
+  "total_comparisons": 160,
+  "predicted_location": "no_match",
+  "expected_location": "db_01",
+  "correct": false,
+  "location_score": 0.0,
+  "second_location": "db_02",
+  "second_score": 0.0,
+  "margin": 0.0,
+  "successful_query_tiles": 0,
+  "best_tile_matches": [
+    {
+      "query_tile": 1,
+      "db_tile": 14,
+      "score": 0.0
+    },
+    {
+      "query_tile": 2,
+      "db_tile": 14,
+      "score": 0.0
+    },
+    {
+      "query_tile": 3,
+      "db_tile": 14,
+      "score": 0.0
+    },
+    {
+      "query_tile": 4,
+      "db_tile": 14,
+      "score": 0.0
+    }
+  ],
+  "query_split": {
+    "split_x": 2394,
+    "split_y": 3199,
+    "margin": 4,
+    "mode": "auto",
+    "vertical_confidence": 0.7899017333984375,
+    "horizontal_confidence": 1.350982666015625,
+    "source_width": 4284,
+    "source_height": 5712,
+    "boxes": [
+      [
+        0,
+        0,
+        2390,
+        3195
+      ],
+      [
+        2399,
+        0,
+        4284,
+        3195
+      ],
+      [
+        0,
+        3204,
+        2390,
+        5712
+      ],
+      [
+        2399,
+        3204,
+        4284,
+        5712
+      ]
+    ]
+  },
+  "query_feature_seconds": 2.5537989000004018,
+  "matching_seconds": 1.7849491000088165,
+  "elapsed_seconds": 4.630865699989954,
+  "config": {
+    "image_scale": 1.0,
+    "nfeatures": 2500,
+    "filter_radius": 20,
+    "bundle_rows": 3,
+    "bundle_cols": 3,
+    "scale_factor": 1.2,
+    "nlevels": 8,
+    "fast_threshold": 5,
+    "edge_threshold": 31,
+    "patch_size": 31,
+    "harris_block_size": 7,
+    "harris_k": 0.04,
+    "ransac_trials": 20000,
+    "geometry_tolerance_px": 5.0,
+    "min_consensus": 20,
+    "random_seed": 0,
+    "validation_radius_px": 5.0,
+    "validation_hamming": 100,
+    "validation_threshold": 0.06,
+    "draw_matches": 10000
+  }
+}

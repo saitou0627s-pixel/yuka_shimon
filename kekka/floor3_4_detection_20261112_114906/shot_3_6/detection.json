@@ -1,0 +1,47 @@
+{
+  "config": {
+    "max_side": 1280,
+    "min_length": 0.1,
+    "dark_difference": 3.0,
+    "line_support": 0.42,
+    "side_support": 0.4,
+    "angle_tolerance": 6.0,
+    "min_area": 0.008,
+    "max_area": 0.65,
+    "max_candidates": 6,
+    "seed": 0,
+    "clahe": false,
+    "clahe_clip_limit": 2.0,
+    "clahe_grid": 8
+  },
+  "source_shape_hw": [
+    5712,
+    4284
+  ],
+  "work_shape_hw": [
+    1280,
+    960
+  ],
+  "raw_segments": 2484,
+  "accepted_lines": 3,
+  "family_counts": [],
+  "vanishing_points_homogeneous_work": [],
+  "candidates": [],
+  "preprocessing": {
+    "mode": "none",
+    "clip_limit": null,
+    "grid_size": null,
+    "scope": "detection_only",
+    "matching_uses_original_image": true
+  },
+  "timings_seconds": {
+    "resize_gray_and_preprocessing": 0.00980570000001535,
+    "clahe": 0.0,
+    "line_extraction": 0.9458617000000231,
+    "vanishing_point_classification": 1.7000002117129043e-06,
+    "candidate_evaluation": 3.999999989900971e-06,
+    "detection_total": 0.9556731000002401
+  },
+  "selected_candidate": null,
+  "warning": "検出スコアは照合の一致割合・確率ではありません。目視確認が必要です。"
+}

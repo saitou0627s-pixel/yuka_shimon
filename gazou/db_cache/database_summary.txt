@@ -1,0 +1,6 @@
+床指紋：登録DBの事前作成完了
+登録元画像：10枚
+登録タイル：40枚
+特徴抽出時間：5.7秒
+保存先：C:\Users\saitoukakeru\OneDrive\デスクトップ\yuka_shimon\gazou\db_cache
+※次回以降は --identify でこのDBを読み込みます。

@@ -1,0 +1,83 @@
+{
+  "location": 7,
+  "source_image": "C:\\Users\\saitoukakeru\\OneDrive\\デスクトップ\\yuka_shimon\\gazou\\db_retake10_02\\db_07.png",
+  "source_sha256": "00af806e500e19654513b9fc43b076ec037dc8558f1d82ff32afd82b4762b77f",
+  "status": "failed",
+  "reason": "目地を確認できません：左外周・右外周・上外周・下外周。画像端では代用しません。",
+  "split": {
+    "method": "registration-visible-three-by-three-grout-grid-v2",
+    "settings": {
+      "max_side": 640,
+      "dark_difference": 3.0,
+      "support": 0.42,
+      "continuity": 0.66,
+      "visible_fraction": 0.55,
+      "max_axis_angle": 25.0,
+      "max_family_angle": 12.0,
+      "max_spacing_ratio": 1.8,
+      "ambiguity_score_gap": 0.015
+    },
+    "detection_size": [
+      640,
+      640
+    ],
+    "vertical_candidates": [
+      [],
+      [
+        {
+          "score": 0.9055549399058024,
+          "support": 0.9416666666666667,
+          "continuity": 1.0,
+          "strength": 9.277654647827148,
+          "width": 5.0,
+          "visible_fraction": 1.0,
+          "p": [
+            314.8235835354103,
+            0.0
+          ],
+          "q": [
+            322.7561607642686,
+            639.0
+          ],
+          "position": 318.7898721498394,
+          "line": [
+            -0.9999229546002137,
+            0.01241309242609446,
+            314.7993278265547
+          ],
+          "axis_angle": 0.7112360726373615
+        }
+      ],
+      []
+    ],
+    "horizontal_candidates": [
+      [],
+      [
+        {
+          "score": 0.8251533691088357,
+          "support": 0.8416666666666667,
+          "continuity": 1.0,
+          "strength": 7.197340488433838,
+          "width": 12.0,
+          "visible_fraction": 1.0,
+          "p": [
+            0.0,
+            316.27906976744185
+          ],
+          "q": [
+            639.0,
+            310.4186046511628
+          ],
+          "position": 313.34883720930236,
+          "line": [
+            0.009170921223090557,
+            0.9999579462176996,
+            -316.2657690362957
+          ],
+          "axis_angle": -0.5254624462451354
+        }
+      ],
+      []
+    ]
+  }
+}

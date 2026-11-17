@@ -1,0 +1,119 @@
+{
+  "method": "single-tile perspective normalization + spatial Hamming + paper RANSAC + validation",
+  "query_image": "C:\\Users\\saitoukakeru\\OneDrive\\デスクトップ\\yuka_shimon\\gazou\\satsuei\\diagonal_angle_2.jpg",
+  "query_shape_hw": [
+    5712,
+    4284
+  ],
+  "query_tiles": 1,
+  "database_tiles": 40,
+  "tile_pair_comparisons": 40,
+  "orientation_comparisons": 160,
+  "prediction": "db_02",
+  "location_score_percent": 30.919999999999998,
+  "best_pair": {
+    "query_tile": 1,
+    "db_location": 2,
+    "db_tile": 3,
+    "db_name": "db_02_tile_3",
+    "rotation_ccw": 0,
+    "score_percent": 30.919999999999998,
+    "success": 1,
+    "candidate_matches": 944,
+    "inliers": 442,
+    "inlier_percent": 46.82203389830508,
+    "ransac_trials": 2,
+    "homography_sane": 1
+  },
+  "location_scores": [
+    {
+      "location": 2,
+      "score_percent": 30.919999999999998,
+      "query_tile": 1,
+      "db_tile": 3
+    },
+    {
+      "location": 10,
+      "score_percent": 13.57615894039735,
+      "query_tile": 1,
+      "db_tile": 4
+    },
+    {
+      "location": 8,
+      "score_percent": 13.4,
+      "query_tile": 1,
+      "db_tile": 4
+    },
+    {
+      "location": 5,
+      "score_percent": 6.88,
+      "query_tile": 1,
+      "db_tile": 3
+    },
+    {
+      "location": 6,
+      "score_percent": 6.72,
+      "query_tile": 1,
+      "db_tile": 1
+    },
+    {
+      "location": 7,
+      "score_percent": 6.68,
+      "query_tile": 1,
+      "db_tile": 1
+    },
+    {
+      "location": 9,
+      "score_percent": 6.68,
+      "query_tile": 1,
+      "db_tile": 2
+    },
+    {
+      "location": 4,
+      "score_percent": 5.800000000000001,
+      "query_tile": 1,
+      "db_tile": 4
+    },
+    {
+      "location": 1,
+      "score_percent": 5.64,
+      "query_tile": 1,
+      "db_tile": 1
+    },
+    {
+      "location": 3,
+      "score_percent": 5.6000000000000005,
+      "query_tile": 1,
+      "db_tile": 2
+    }
+  ],
+  "config": {
+    "tile_size": 512,
+    "features_per_tile": 2500,
+    "fast_threshold": 5,
+    "margin_ratio": 0.04,
+    "spatial_radius": 18,
+    "hamming": 100,
+    "threshold": 0.06,
+    "trials": 20000,
+    "seed": 0,
+    "detection_max_side": 1400,
+    "max_tiles": 12,
+    "max_residual_corner_shift_ratio": 0.2
+  },
+  "expected_db": 2,
+  "correct_identification": true,
+  "timings": {
+    "db_load_seconds": 0.3401562999933958,
+    "detection_rectify_seconds": 0.18624199999612756,
+    "query_feature_seconds": 0.1192346999887377,
+    "matching_seconds": 8.851364600006491,
+    "elapsed_seconds": 9.533331799990265
+  },
+  "notes": [
+    "location score is maximum pair score; provisional decision rule",
+    "automatic quadrilaterals are candidates, not guaranteed tile detections",
+    "RANSAC is used for every orientation; BFMatcher is not used",
+    "no evaluation labels are used to choose the result"
+  ]
+}

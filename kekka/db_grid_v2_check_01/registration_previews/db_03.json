@@ -1,0 +1,130 @@
+{
+  "location": 3,
+  "source_image": "C:\\Users\\saitoukakeru\\OneDrive\\デスクトップ\\yuka_shimon\\gazou\\db_retake10_02\\db_03.png",
+  "source_sha256": "0210c31aea0a4b542c40d72f90fbe384dfcf761bf8f6ba6398273a6375bfc445",
+  "status": "failed",
+  "reason": "目地を確認できません：左外周・右外周・下外周。画像端では代用しません。",
+  "split": {
+    "method": "registration-visible-three-by-three-grout-grid-v2",
+    "settings": {
+      "max_side": 640,
+      "dark_difference": 3.0,
+      "support": 0.42,
+      "continuity": 0.66,
+      "visible_fraction": 0.55,
+      "max_axis_angle": 25.0,
+      "max_family_angle": 12.0,
+      "max_spacing_ratio": 1.8,
+      "ambiguity_score_gap": 0.015
+    },
+    "detection_size": [
+      640,
+      640
+    ],
+    "vertical_candidates": [
+      [],
+      [
+        {
+          "score": 0.9959249814351399,
+          "support": 0.9958333333333333,
+          "continuity": 1.0,
+          "strength": 19.768329620361328,
+          "width": 12.0,
+          "visible_fraction": 1.0,
+          "p": [
+            323.070796460177,
+            0.0
+          ],
+          "q": [
+            320.41592920353986,
+            639.0
+          ],
+          "position": 321.74336283185846,
+          "line": [
+            -0.9999913692549462,
+            -0.004154685983027704,
+            323.0680081184985
+          ],
+          "axis_angle": -0.2380466568700452
+        },
+        {
+          "score": 0.5150998473167419,
+          "support": 0.49166666666666664,
+          "continuity": 0.6666666666666666,
+          "strength": 7.519969463348389,
+          "width": 12.0,
+          "visible_fraction": 1.0,
+          "p": [
+            320.99999999999994,
+            0.0
+          ],
+          "q": [
+            334.89130434782606,
+            639.0
+          ],
+          "position": 327.945652173913,
+          "line": [
+            -0.9997637888239164,
+            0.021733995409215626,
+            320.9241762124771
+          ],
+          "axis_angle": 1.2453642667683507
+        }
+      ],
+      []
+    ],
+    "horizontal_candidates": [
+      [
+        {
+          "score": 0.7746011036320736,
+          "support": 0.8345864661654135,
+          "continuity": 0.75,
+          "strength": 8.078115463256836,
+          "width": 3.0,
+          "visible_fraction": 0.5541666666666667,
+          "p": [
+            0.0,
+            1.183673469387755
+          ],
+          "q": [
+            639.0,
+            5.224489795918368
+          ],
+          "position": 3.2040816326530615,
+          "line": [
+            -0.006323529789676274,
+            0.9999800062856252,
+            -1.1836498033584952
+          ],
+          "axis_angle": 0.3623139832443498
+        }
+      ],
+      [
+        {
+          "score": 0.9830541419982911,
+          "support": 0.9875,
+          "continuity": 1.0,
+          "strength": 18.360828399658203,
+          "width": 12.0,
+          "visible_fraction": 1.0,
+          "p": [
+            0.0,
+            308.54065076048846
+          ],
+          "q": [
+            639.0,
+            312.82490620228356
+          ],
+          "position": 310.682778481386,
+          "line": [
+            -0.006704474416464497,
+            0.9999775247588313,
+            -308.53371623495224
+          ],
+          "axis_angle": 0.38414096580811297
+        }
+      ],
+      []
+    ]
+  }
+}

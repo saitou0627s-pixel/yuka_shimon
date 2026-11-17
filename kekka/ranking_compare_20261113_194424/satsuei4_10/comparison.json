@@ -1,0 +1,214 @@
+{
+  "source_image": "C:\\Users\\saitoukakeru\\OneDrive\\デスクトップ\\yuka_shimon\\gazou\\satsuei\\satsuei4_10.jpg",
+  "source_sha256": "a535965227168fa23f7eeb1c5a61cfb603f1de5b61160bf4b0beeeb573311a8c",
+  "script_sha256": "4a4954e294509cea1a0a0b3767f53dd874e5990279e7b0483b4f41d4933d14e5",
+  "config": {
+    "max_side": 1280,
+    "min_length": 0.05,
+    "dark_difference": 3.0,
+    "line_support": 0.42,
+    "side_support": 0.4,
+    "angle_tolerance": 6.0,
+    "min_area": 0.008,
+    "max_area": 0.65,
+    "max_candidates": 6,
+    "seed": 0,
+    "clahe": false,
+    "clahe_clip_limit": 2.0,
+    "clahe_grid": 8,
+    "line_selection": "diverse",
+    "candidate_ranking": "score",
+    "score_margin": 0.05
+  },
+  "source_shape_hw": [
+    5712,
+    4284
+  ],
+  "comparison_methods": [
+    "large-clear",
+    "near-clear"
+  ],
+  "shared_detection_count": 1,
+  "top_detection_score": 0.951773475209872,
+  "quality_cutoff": 0.9017734752098719,
+  "candidate_pool_scope": "existing_candidates_after_deduplication_and_limit",
+  "near_definition": "maximum mean y of four corners in the decoded image; not metric distance",
+  "same_selected_candidate": true,
+  "shared_detection_timings_seconds": {
+    "resize_gray_and_preprocessing": 0.00859620000119321,
+    "clahe": 0.0,
+    "line_extraction": 0.7770877999864751,
+    "vanishing_point_classification": 0.011650000000372529,
+    "candidate_evaluation": 0.017598800011910498,
+    "detection_total": 0.8149327999999514
+  },
+  "candidates": [
+    {
+      "score_rank": 1,
+      "detection_score": 0.951773475209872,
+      "quality_eligible": true,
+      "area_fraction": 0.06934039475278704,
+      "center_y_fraction": 0.38538055419921874,
+      "quad_original_xy": [
+        [
+          1014.1388053894043,
+          1645.9013637542723
+        ],
+        [
+          2347.0573768615723,
+          1574.7711456298828
+        ],
+        [
+          2436.29239654541,
+          2757.959550476074
+        ],
+        [
+          896.2909051895141,
+          2826.542433929443
+        ]
+      ]
+    },
+    {
+      "score_rank": 2,
+      "detection_score": 0.922929776410928,
+      "quality_eligible": true,
+      "area_fraction": 0.04697593590610381,
+      "center_y_fraction": 0.19108908176422118,
+      "quad_original_xy": [
+        [
+          2279.468096923828,
+          678.5851026535034
+        ],
+        [
+          3470.185063934326,
+          610.2804445266723
+        ],
+        [
+          3703.8572959899902,
+          1502.3665111541748
+        ],
+        [
+          2347.0573768615723,
+          1574.7711456298828
+        ]
+      ]
+    },
+    {
+      "score_rank": 3,
+      "detection_score": 0.9122640840650303,
+      "quality_eligible": true,
+      "area_fraction": 0.0459970054416245,
+      "center_y_fraction": 0.20331211090087892,
+      "quad_original_xy": [
+        [
+          1103.9624153137206,
+          746.0172254562377
+        ],
+        [
+          2279.468096923828,
+          678.5851026535034
+        ],
+        [
+          2347.0573768615723,
+          1574.7711456298828
+        ],
+        [
+          1014.1388053894043,
+          1645.9013637542723
+        ]
+      ]
+    },
+    {
+      "score_rank": 4,
+      "detection_score": 0.6970747501651445,
+      "quality_eligible": false,
+      "area_fraction": 0.11171242029854701,
+      "center_y_fraction": 0.6311389923095703,
+      "quad_original_xy": [
+        [
+          896.2909051895141,
+          2826.542433929443
+        ],
+        [
+          2436.29239654541,
+          2757.959550476074
+        ],
+        [
+          2558.525511932373,
+          4378.680500793457
+        ],
+        [
+          733.5356941223145,
+          4457.081211090088
+        ]
+      ]
+    },
+    {
+      "score_rank": 5,
+      "detection_score": 0.6616541984291889,
+      "quality_eligible": false,
+      "area_fraction": 0.02742737521376469,
+      "center_y_fraction": 0.21300897598266602,
+      "quad_original_xy": [
+        [
+          400.0095090866089,
+          786.3989828109741
+        ],
+        [
+          1103.9624153137206,
+          746.0172254562377
+        ],
+        [
+          1014.1388053894043,
+          1645.9013637542723
+        ],
+        [
+          215.66483659744262,
+          1688.5113750457763
+        ]
+      ]
+    }
+  ],
+  "selections": [
+    {
+      "method": "large-clear",
+      "status": "selected",
+      "candidate_count": 5,
+      "quality_eligible_count": 3,
+      "selected_score_rank": 1,
+      "detection_score": 0.951773475209872,
+      "area_fraction": 0.06934039475278704,
+      "center_y_fraction": 0.38538055419921874,
+      "points_argument": "1014.14,1645.90;2347.06,1574.77;2436.29,2757.96;896.29,2826.54",
+      "output_directory": "large_clear",
+      "ranking_only_seconds": 1.1999989510513842e-05,
+      "is_complete_tile": "",
+      "expected_floor": "",
+      "expected_location": "",
+      "expected_tile": ""
+    },
+    {
+      "method": "near-clear",
+      "status": "selected",
+      "candidate_count": 5,
+      "quality_eligible_count": 3,
+      "selected_score_rank": 1,
+      "detection_score": 0.951773475209872,
+      "area_fraction": 0.06934039475278704,
+      "center_y_fraction": 0.38538055419921874,
+      "points_argument": "1014.14,1645.90;2347.06,1574.77;2436.29,2757.96;896.29,2826.54",
+      "output_directory": "near_clear",
+      "ranking_only_seconds": 6.769999163225293e-05,
+      "is_complete_tile": "",
+      "expected_floor": "",
+      "expected_location": "",
+      "expected_tile": ""
+    }
+  ],
+  "notes": [
+    "Detection, candidate pool, score margin and image orientation are shared.",
+    "Detection time is shared; do not add the same time twice.",
+    "No matching or accuracy judgment is performed. Review each selected tile.",
+    "is_complete_tile and expected_* are blank for manual review."
+  ]
+}

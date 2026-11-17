@@ -16,6 +16,10 @@ DB作成側も利用する extract_lines 自体には補正を追加しない。
 既定のbalancedと従来のlegacyは比較のため変更しない。
 --candidate-ranking large-clear は既存の採用候補内で、最高目地スコアから
 --score-margin以内の候補のうち画像上の面積最大を選ぶ。既定のscoreは従来順。
+--candidate-ranking near-clear は同じスコア条件から、四隅の平均y座標が最大の
+候補を選ぶ。「手前」は画像の下側という代理指標であり、実距離ではない。
+--compare-rankings は検出を1回だけ行い、同じ候補をlarge-clearとnear-clearで
+選び直して診断画像・比較CSVを保存する。比較時は照合を自動実行しない。
 この順位変更は候補抽出後だけに適用し、目地判定条件やDB・照合結果を使わない。
 DB作成側が既定引数で呼ぶ extract_lines の候補選択は従来方式のまま。
 消失点が無限遠になる、ほぼ平行な線も同次座標で扱う。
@@ -33,8 +37,10 @@ DB作成側が既定引数で呼ぶ extract_lines の候補選択は従来方式
 from __future__ import annotations
 
 import argparse
-from dataclasses import asdict, dataclass
+import csv
+from dataclasses import asdict, dataclass, replace
 from datetime import datetime
+import hashlib
 from itertools import combinations
 import json
 import math
@@ -462,8 +468,8 @@ def prepare_detection_gray(work: np.ndarray, c: Config):
 
 def rank_candidates(candidates, c, image_area):
     """抽出済み（重複除去・件数上限適用済み）の候補の選択だけを変える。"""
-    if c.candidate_ranking not in ("score", "large-clear"):
-        raise ValueError("candidate-rankingはscoreまたはlarge-clearです。")
+    if c.candidate_ranking not in ("score", "large-clear", "near-clear"):
+        raise ValueError("candidate-rankingはscore、large-clear、near-clearです。")
     if not math.isfinite(c.score_margin) or not 0 <= c.score_margin <= 1:
         raise ValueError("score-marginは0～1の有限値です。")
     # 元の検出順を記録する。入力の候補・配列を変更しない。
@@ -475,13 +481,19 @@ def rank_candidates(candidates, c, image_area):
     if rows and c.candidate_ranking == "large-clear":
         winner = max(eligible, key=lambda r: (r["area"], r["score"], -r["score_rank"]))
         rows = [winner] + [r for r in rows if r is not winner]
+    elif rows and c.candidate_ranking == "near-clear":
+        winner = max(eligible, key=lambda r: (
+            float(np.mean(np.asarray(r["quad"])[:, 1])),
+            r["area"], r["score"], -r["score_rank"]))
+        rows = [winner] + [r for r in rows if r is not winner]
     selected = rows[0] if rows else None
+    quality_mode = c.candidate_ranking in ("large-clear", "near-clear")
     details = dict(mode=c.candidate_ranking,
                    scope="existing_detected_candidates_only",
-                   score_margin=c.score_margin if c.candidate_ranking == "large-clear" else None,
+                   score_margin=c.score_margin if quality_mode else None,
                    top_detection_score=top_score,
-                   quality_cutoff=cutoff if c.candidate_ranking == "large-clear" else None,
-                   quality_eligible_count=len(eligible) if c.candidate_ranking == "large-clear" else None,
+                   quality_cutoff=cutoff if quality_mode else None,
+                   quality_eligible_count=len(eligible) if quality_mode else None,
                    selected_score_rank=selected["score_rank"] if selected else None,
                    selected_area_fraction=(selected["area"] / image_area if selected else None))
     return rows, details
@@ -596,12 +608,102 @@ def save_results(image, result, output, c):
         lines += [f"候補の選択：{c.candidate_ranking} / 採用候補の元スコア順位：{ranking['selected_score_rank']}位"]
         if c.candidate_ranking == "large-clear":
             lines += [f"最高目地スコアとの差{c.score_margin:g}以内から面積最大を選択（暫定条件）"]
+        elif c.candidate_ranking == "near-clear":
+            lines += [f"最高目地スコアとの差{c.score_margin:g}以内から四隅の平均y座標が最大の候補を選択",
+                      "手前＝画像の下側という代理指標です。実距離・床の正しさは保証しません。"]
         lines += [f"検出スコア：{rows[0]['detection_score']:.3f}（一致率ではない）",
                   f"元画像座標の四隅：{rows[0]['points_argument']}"]
     (output / "detection_summary.txt").write_text("\n".join(lines) + "\n", encoding="utf-8")
     print("\n".join(lines), flush=True)
     print(f"保存先：{output}", flush=True)
     return rows
+
+
+def compare_rankings(image, result, output, c, image_path):
+    """同一検出・同一候補・同一スコア条件で、最後の選択だけ比較する。
+
+    候補は既存の件数上限・重複除去を通ったものに限る。候補を増減しない。
+    正解地点・タイル番号は参照しない。CSVの正解欄は目視確認後に記入する。
+    """
+    output.mkdir(parents=True, exist_ok=False)
+    # detect()で採用順に並べ替えた場合も、元スコア順へ戻して同一の母集団を使う。
+    pool = sorted(result["candidates"], key=lambda row: row["score_rank"])
+    top_score = max((r["score"] for r in pool), default=None)
+    cutoff = top_score - c.score_margin if top_score is not None else None
+    work_h, work_w = result["work"].shape[:2]
+    selections = []
+    pictures = []
+    for mode in ("large-clear", "near-clear"):
+        config = replace(c, candidate_ranking=mode)
+        started = time.perf_counter()
+        ranked, details = rank_candidates(pool, config, work_h * work_w)
+        ranking_seconds = time.perf_counter() - started
+        method_result = dict(result, candidates=ranked, candidate_ranking=details)
+        folder_name = mode.replace("-", "_")
+        rows = save_results(image, method_result, output / folder_name, config)
+        winner = ranked[0] if ranked else None
+        selections.append(dict(
+            method=mode, status="selected" if winner else "no_candidate",
+            candidate_count=len(pool), quality_eligible_count=details["quality_eligible_count"],
+            selected_score_rank=details["selected_score_rank"],
+            detection_score=winner["score"] if winner else None,
+            area_fraction=details["selected_area_fraction"],
+            center_y_fraction=(float(np.mean(winner["quad"][:, 1])) / work_h
+                               if winner else None),
+            points_argument=rows[0]["points_argument"] if rows else None,
+            output_directory=folder_name, ranking_only_seconds=ranking_seconds,
+            is_complete_tile="", expected_floor="", expected_location="", expected_tile=""))
+        picture = read_image(output / folder_name / "04_detected_tiles.jpg")
+        picture = cv2.copyMakeBorder(picture, 48, 0, 0, 0, cv2.BORDER_CONSTANT,
+                                     value=(255, 255, 255))
+        label = mode + ("  (no candidate)" if winner is None else
+                        f"  score-rank={winner['score_rank']}  score={winner['score']:.3f}")
+        cv2.putText(picture, label, (12, 32), cv2.FONT_HERSHEY_SIMPLEX,
+                    .60, (20, 20, 20), 1, cv2.LINE_AA)
+        pictures.append(picture)
+    same = (selections[0]["selected_score_rank"] == selections[1]["selected_score_rank"]
+            if pool else None)
+    candidates = [dict(
+        score_rank=r["score_rank"], detection_score=r["score"],
+        quality_eligible=r["score"] + 1e-12 >= cutoff,
+        area_fraction=r["area"] / (work_h * work_w),
+        center_y_fraction=float(np.mean(r["quad"][:, 1])) / work_h,
+        quad_original_xy=r["quad_original"].tolist()) for r in pool]
+    report = dict(
+        source_image=str(image_path), source_sha256=hashlib.sha256(image_path.read_bytes()).hexdigest(),
+        script_sha256=hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
+        config=asdict(c), source_shape_hw=list(image.shape[:2]),
+        comparison_methods=["large-clear", "near-clear"],
+        shared_detection_count=1, top_detection_score=top_score, quality_cutoff=cutoff,
+        candidate_pool_scope="existing_candidates_after_deduplication_and_limit",
+        near_definition="maximum mean y of four corners in the decoded image; not metric distance",
+        same_selected_candidate=same, shared_detection_timings_seconds=result["timings_seconds"],
+        candidates=candidates, selections=selections,
+        notes=["Detection, candidate pool, score margin and image orientation are shared.",
+               "Detection time is shared; do not add the same time twice.",
+               "No matching or accuracy judgment is performed. Review each selected tile.",
+               "is_complete_tile and expected_* are blank for manual review."])
+    (output / "comparison.json").write_text(
+        json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
+    with (output / "comparison.csv").open("w", newline="", encoding="utf-8-sig") as stream:
+        writer = csv.DictWriter(stream, fieldnames=list(selections[0]))
+        writer.writeheader()
+        writer.writerows(selections)
+    save_image(output / "05_ranking_comparison.jpg", np.hstack(pictures))
+    lines = [
+        "面積優先・手前優先の比較（検出1回、同一候補）",
+        f"撮影画像：{image_path}",
+        f"最高検出スコアとの差{c.score_margin:g}以内を両方式で共通使用",
+        f"候補数：{len(pool)} / 品質条件内：{selections[0]['quality_eligible_count']}",
+        "large-clear：面積最大。near-clear：四隅の平均y座標最大（画像の下側）。",
+        "左右比較：05_ranking_comparison.jpg（左=面積、右=手前、緑=採用）",
+        "手前は画像内の位置による代理指標です。写真の上下をそろえて比較してください。",
+        "候補上限やスコア条件の外にあるタイルは、どちらの方式でも選べません。",
+        "同じ候補を選択：" + ("候補なし" if same is None else ("はい" if same else "いいえ")),
+        "照合は未実行。CSVのis_complete_tileとexpected_*を目視確認後に記入してください。"]
+    (output / "comparison_summary.txt").write_text("\n".join(lines) + "\n", encoding="utf-8")
+    print("\n".join(lines), flush=True)
+    return bool(pool)
 
 
 def run_sweep(args, row, image_path, shape, output):
@@ -686,10 +788,12 @@ def main():
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--line-selection", choices=("balanced", "legacy", "diverse"), default="balanced",
                         help="balanced: 方式別の枠。diverse: 方式と向きに分散（計500本）。legacy: 従来の長さ順500本")
-    parser.add_argument("--candidate-ranking", choices=("score", "large-clear"), default="score",
-                        help="score: 従来順。large-clear: スコアの近い採用候補から画像上の面積最大を選択")
+    parser.add_argument("--candidate-ranking", choices=("score", "large-clear", "near-clear"), default="score",
+                        help="score: 従来順。large-clear: 面積最大。near-clear: 四隅の平均y最大（後2方式は同じスコア条件）")
+    parser.add_argument("--compare-rankings", action="store_true",
+                        help="検出1回・同じ候補でlarge-clearとnear-clearを比較保存。照合は行わない")
     parser.add_argument("--score-margin", type=float, default=0.05,
-                        help="large-clearで許容する最高目地スコアとの差。0～1（暫定値0.05）")
+                        help="large-clear/near-clearで許容する最高目地スコアとの差。0～1（暫定値0.05）")
     parser.add_argument("--clahe", action="store_true", help="検出用の縮小グレー画像だけをCLAHE補正（既定はオフ）")
     parser.add_argument("--clahe-clip-limit", type=float, default=2.0, help="CLAHEのコントラスト制限。正の有限値（暫定値2.0）")
     parser.add_argument("--clahe-grid", type=int, default=8, help="CLAHEの各軸の画像分割数1～64。床タイル数ではない（既定8）")
@@ -700,6 +804,8 @@ def main():
         return
     if not args.satsuei:
         parser.error("--satsueiを指定してください。")
+    if args.compare_rankings and args.run_sweep:
+        parser.error("--compare-rankingsは検出選択の比較専用です。--run-sweepとは同時指定できません。")
     c = Config(**{k: getattr(args, k) for k in Config.__dataclass_fields__})
     if not math.isfinite(c.score_margin) or not 0 <= c.score_margin <= 1:
         raise ValueError("score-marginは0～1の有限値です。")
@@ -717,7 +823,17 @@ def main():
     if output.exists():
         raise FileExistsError(f"結果フォルダが既にあります：{output}")
     started = time.perf_counter()
-    result = detect(image, c)
+    # 比較時の共通候補生成は従来スコア順で行い、両方式の選択はその後だけに適用。
+    detection_config = replace(c, candidate_ranking="score") if args.compare_rankings else c
+    result = detect(image, detection_config)
+    if args.compare_rankings:
+        found = compare_rankings(image, result, output, detection_config, image_path)
+        print(f"比較・診断保存時間：{time.perf_counter() - started:.2f}秒", flush=True)
+        print(f"保存先：{output}", flush=True)
+        if not found:
+            print("候補がありません。比較結果を保存しました。照合は実行しません。", file=sys.stderr)
+            raise SystemExit(2)
+        return
     rows = save_results(image, result, output, c)
     print(f"検出・診断保存時間：{time.perf_counter() - started:.2f}秒", flush=True)
     if not rows:
@@ -733,3 +849,4 @@ if __name__ == "__main__":
     except (OSError, ValueError, RuntimeError, cv2.error) as exc:
         print(f"実行できませんでした：{exc}", file=sys.stderr)
         raise SystemExit(1)
+

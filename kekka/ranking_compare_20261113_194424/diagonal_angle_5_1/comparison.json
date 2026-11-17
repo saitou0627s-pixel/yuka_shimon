@@ -1,0 +1,239 @@
+{
+  "source_image": "C:\\Users\\saitoukakeru\\OneDrive\\デスクトップ\\yuka_shimon\\gazou\\satsuei\\diagonal_angle_5_1.jpg",
+  "source_sha256": "f1f0286f0842fd8aaecdecdbcd65ced6ec871ef24b55234b63a113384ff448e2",
+  "script_sha256": "4a4954e294509cea1a0a0b3767f53dd874e5990279e7b0483b4f41d4933d14e5",
+  "config": {
+    "max_side": 1280,
+    "min_length": 0.05,
+    "dark_difference": 3.0,
+    "line_support": 0.42,
+    "side_support": 0.4,
+    "angle_tolerance": 6.0,
+    "min_area": 0.008,
+    "max_area": 0.65,
+    "max_candidates": 6,
+    "seed": 0,
+    "clahe": false,
+    "clahe_clip_limit": 2.0,
+    "clahe_grid": 8,
+    "line_selection": "diverse",
+    "candidate_ranking": "score",
+    "score_margin": 0.05
+  },
+  "source_shape_hw": [
+    5712,
+    4284
+  ],
+  "comparison_methods": [
+    "large-clear",
+    "near-clear"
+  ],
+  "shared_detection_count": 1,
+  "top_detection_score": 1.0,
+  "quality_cutoff": 0.95,
+  "candidate_pool_scope": "existing_candidates_after_deduplication_and_limit",
+  "near_definition": "maximum mean y of four corners in the decoded image; not metric distance",
+  "same_selected_candidate": true,
+  "shared_detection_timings_seconds": {
+    "resize_gray_and_preprocessing": 0.009492500001215376,
+    "clahe": 0.0,
+    "line_extraction": 0.8955156999872997,
+    "vanishing_point_classification": 0.03350000000500586,
+    "candidate_evaluation": 0.20529379999788944,
+    "detection_total": 1.1438019999914104
+  },
+  "candidates": [
+    {
+      "score_rank": 1,
+      "detection_score": 1.0,
+      "quality_eligible": true,
+      "area_fraction": 0.12091188821898262,
+      "center_y_fraction": 0.7528470993041992,
+      "quad_original_xy": [
+        [
+          1192.3168647766113,
+          4140.016827392578
+        ],
+        [
+          2407.8436866760253,
+          3177.724896240234
+        ],
+        [
+          3609.5559333801266,
+          4260.524755096435
+        ],
+        [
+          2348.2214836120606,
+          5622.78431854248
+        ]
+      ]
+    },
+    {
+      "score_rank": 2,
+      "detection_score": 0.9677752989530564,
+      "quality_eligible": true,
+      "area_fraction": 0.0168926952482929,
+      "center_y_fraction": 0.24653785228729247,
+      "quad_original_xy": [
+        [
+          332.1675044059753,
+          1307.441411590576
+        ],
+        [
+          882.2041648864746,
+          1058.2060609817504
+        ],
+        [
+          1459.6268520355225,
+          1478.1068424224852
+        ],
+        [
+          866.7687194824218,
+          1789.1426021575926
+        ]
+      ]
+    },
+    {
+      "score_rank": 3,
+      "detection_score": 0.9000258096059165,
+      "quality_eligible": false,
+      "area_fraction": 0.04955991464998381,
+      "center_y_fraction": 0.4309260368347168,
+      "quad_original_xy": [
+        [
+          1550.656105041504,
+          2405.3577713012696
+        ],
+        [
+          2455.0777130126953,
+          1825.3185676574706
+        ],
+        [
+          3342.994281005859,
+          2437.3971267700194
+        ],
+        [
+          2407.8436866760253,
+          3177.724896240234
+        ]
+      ]
+    },
+    {
+      "score_rank": 4,
+      "detection_score": 0.7995970592896142,
+      "quality_eligible": false,
+      "area_fraction": 0.07232318900215545,
+      "center_y_fraction": 0.561405086517334,
+      "quad_original_xy": [
+        [
+          395.8795721054077,
+          3118.3660743713376
+        ],
+        [
+          1534.5830429077148,
+          2390.875074005127
+        ],
+        [
+          2407.8436866760253,
+          3177.724896240234
+        ],
+        [
+          1192.3168647766113,
+          4140.016827392578
+        ]
+      ]
+    },
+    {
+      "score_rank": 5,
+      "detection_score": 0.7547898330723974,
+      "quality_eligible": false,
+      "area_fraction": 0.016986944432226588,
+      "center_y_fraction": 0.2529613018035889,
+      "quad_original_xy": [
+        [
+          1993.065832901001,
+          1506.8341861724853
+        ],
+        [
+          2738.583737182617,
+          1097.0903995513916
+        ],
+        [
+          3195.564546203613,
+          1350.4166702270506
+        ],
+        [
+          2455.0777130126953,
+          1825.3185676574706
+        ]
+      ]
+    },
+    {
+      "score_rank": 6,
+      "detection_score": 0.5856124846366572,
+      "quality_eligible": false,
+      "area_fraction": 0.024261553935861,
+      "center_y_fraction": 0.33727140426635743,
+      "quad_original_xy": [
+        [
+          1082.1162117004394,
+          1983.1810031890868
+        ],
+        [
+          1971.719971847534,
+          1492.1197025299073
+        ],
+        [
+          2455.0777130126953,
+          1825.3185676574706
+        ],
+        [
+          1550.656105041504,
+          2405.3577713012696
+        ]
+      ]
+    }
+  ],
+  "selections": [
+    {
+      "method": "large-clear",
+      "status": "selected",
+      "candidate_count": 6,
+      "quality_eligible_count": 2,
+      "selected_score_rank": 1,
+      "detection_score": 1.0,
+      "area_fraction": 0.12091188821898262,
+      "center_y_fraction": 0.7528470993041992,
+      "points_argument": "1192.32,4140.02;2407.84,3177.72;3609.56,4260.52;2348.22,5622.78",
+      "output_directory": "large_clear",
+      "ranking_only_seconds": 1.3999990187585354e-05,
+      "is_complete_tile": "",
+      "expected_floor": "",
+      "expected_location": "",
+      "expected_tile": ""
+    },
+    {
+      "method": "near-clear",
+      "status": "selected",
+      "candidate_count": 6,
+      "quality_eligible_count": 2,
+      "selected_score_rank": 1,
+      "detection_score": 1.0,
+      "area_fraction": 0.12091188821898262,
+      "center_y_fraction": 0.7528470993041992,
+      "points_argument": "1192.32,4140.02;2407.84,3177.72;3609.56,4260.52;2348.22,5622.78",
+      "output_directory": "near_clear",
+      "ranking_only_seconds": 0.00010879999899771065,
+      "is_complete_tile": "",
+      "expected_floor": "",
+      "expected_location": "",
+      "expected_tile": ""
+    }
+  ],
+  "notes": [
+    "Detection, candidate pool, score margin and image orientation are shared.",
+    "Detection time is shared; do not add the same time twice.",
+    "No matching or accuracy judgment is performed. Review each selected tile.",
+    "is_complete_tile and expected_* are blank for manual review."
+  ]
+}

@@ -1,0 +1,343 @@
+{
+  "config": {
+    "max_side": 1280,
+    "min_length": 0.05,
+    "dark_difference": 3.0,
+    "line_support": 0.42,
+    "side_support": 0.4,
+    "angle_tolerance": 6.0,
+    "min_area": 0.008,
+    "max_area": 0.65,
+    "max_candidates": 6,
+    "seed": 0,
+    "clahe": false,
+    "clahe_clip_limit": 2.0,
+    "clahe_grid": 8,
+    "line_selection": "diverse",
+    "candidate_ranking": "near-clear",
+    "score_margin": 0.05
+  },
+  "source_shape_hw": [
+    5712,
+    4284
+  ],
+  "work_shape_hw": [
+    1280,
+    960
+  ],
+  "raw_segments": 4300,
+  "accepted_lines": 24,
+  "family_counts": [
+    9,
+    7
+  ],
+  "vanishing_points_homogeneous_work": [
+    [
+      0.9523578371521811,
+      -0.3049826132763321,
+      0.0003944793518721545
+    ],
+    [
+      -0.8350549157052447,
+      -0.5501659040311565,
+      0.0008750989010909679
+    ]
+  ],
+  "candidates": [
+    {
+      "candidate": 1,
+      "detection_score": 1.0,
+      "score_rank": 1,
+      "area_work_px": 148576.52824348584,
+      "area_fraction": 0.12091188821898262,
+      "quad_original_xy": [
+        [
+          1192.3168647766113,
+          4140.016827392578
+        ],
+        [
+          2407.8436866760253,
+          3177.724896240234
+        ],
+        [
+          3609.5559333801266,
+          4260.524755096435
+        ],
+        [
+          2348.2214836120606,
+          5622.78431854248
+        ]
+      ],
+      "points_argument": "1192.32,4140.02;2407.84,3177.72;3609.56,4260.52;2348.22,5622.78",
+      "side_support": [
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "estimated_band_offset_px": [
+        8.0,
+        3.0,
+        5.0,
+        5.0
+      ]
+    },
+    {
+      "candidate": 2,
+      "detection_score": 0.9677752989530564,
+      "score_rank": 2,
+      "area_work_px": 20757.743921102316,
+      "area_fraction": 0.0168926952482929,
+      "quad_original_xy": [
+        [
+          332.1675044059753,
+          1307.441411590576
+        ],
+        [
+          882.2041648864746,
+          1058.2060609817504
+        ],
+        [
+          1459.6268520355225,
+          1478.1068424224852
+        ],
+        [
+          866.7687194824218,
+          1789.1426021575926
+        ]
+      ],
+      "points_argument": "332.17,1307.44;882.20,1058.21;1459.63,1478.11;866.77,1789.14",
+      "side_support": [
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "estimated_band_offset_px": [
+        5.0,
+        12.0,
+        5.0,
+        3.0
+      ]
+    },
+    {
+      "candidate": 3,
+      "detection_score": 0.9000258096059165,
+      "score_rank": 3,
+      "area_work_px": 60899.22312190011,
+      "area_fraction": 0.04955991464998381,
+      "quad_original_xy": [
+        [
+          1550.656105041504,
+          2405.3577713012696
+        ],
+        [
+          2455.0777130126953,
+          1825.3185676574706
+        ],
+        [
+          3342.994281005859,
+          2437.3971267700194
+        ],
+        [
+          2407.8436866760253,
+          3177.724896240234
+        ]
+      ],
+      "points_argument": "1550.66,2405.36;2455.08,1825.32;3342.99,2437.40;2407.84,3177.72",
+      "side_support": [
+        1.0,
+        0.9458333333333333,
+        0.8958333333333334,
+        1.0
+      ],
+      "estimated_band_offset_px": [
+        5.0,
+        5.0,
+        8.0,
+        3.0
+      ]
+    },
+    {
+      "candidate": 4,
+      "detection_score": 0.7995970592896142,
+      "score_rank": 4,
+      "area_work_px": 88870.73464584863,
+      "area_fraction": 0.07232318900215545,
+      "quad_original_xy": [
+        [
+          395.8795721054077,
+          3118.3660743713376
+        ],
+        [
+          1534.5830429077148,
+          2390.875074005127
+        ],
+        [
+          2407.8436866760253,
+          3177.724896240234
+        ],
+        [
+          1192.3168647766113,
+          4140.016827392578
+        ]
+      ],
+      "points_argument": "395.88,3118.37;1534.58,2390.88;2407.84,3177.72;1192.32,4140.02",
+      "side_support": [
+        0.8083333333333333,
+        1.0,
+        1.0,
+        0.7541666666666667
+      ],
+      "estimated_band_offset_px": [
+        8.0,
+        3.0,
+        8.0,
+        5.0
+      ]
+    },
+    {
+      "candidate": 5,
+      "detection_score": 0.7547898330723974,
+      "score_rank": 5,
+      "area_work_px": 20873.557318320032,
+      "area_fraction": 0.016986944432226588,
+      "quad_original_xy": [
+        [
+          1993.065832901001,
+          1506.8341861724853
+        ],
+        [
+          2738.583737182617,
+          1097.0903995513916
+        ],
+        [
+          3195.564546203613,
+          1350.4166702270506
+        ],
+        [
+          2455.0777130126953,
+          1825.3185676574706
+        ]
+      ],
+      "points_argument": "1993.07,1506.83;2738.58,1097.09;3195.56,1350.42;2455.08,1825.32",
+      "side_support": [
+        0.9528795811518325,
+        0.7350427350427351,
+        0.9644670050761421,
+        0.9047619047619048
+      ],
+      "estimated_band_offset_px": [
+        12.0,
+        5.0,
+        5.0,
+        3.0
+      ]
+    },
+    {
+      "candidate": 6,
+      "detection_score": 0.5856124846366572,
+      "score_rank": 6,
+      "area_work_px": 29812.597476386,
+      "area_fraction": 0.024261553935861,
+      "quad_original_xy": [
+        [
+          1082.1162117004394,
+          1983.1810031890868
+        ],
+        [
+          1971.719971847534,
+          1492.1197025299073
+        ],
+        [
+          2455.0777130126953,
+          1825.3185676574706
+        ],
+        [
+          1550.656105041504,
+          2405.3577713012696
+        ]
+      ],
+      "points_argument": "1082.12,1983.18;1971.72,1492.12;2455.08,1825.32;1550.66,2405.36",
+      "side_support": [
+        0.4692982456140351,
+        0.9015151515151515,
+        1.0,
+        0.9219858156028369
+      ],
+      "estimated_band_offset_px": [
+        12.0,
+        3.0,
+        5.0,
+        3.0
+      ]
+    }
+  ],
+  "preprocessing": {
+    "mode": "none",
+    "clip_limit": null,
+    "grid_size": null,
+    "scope": "detection_only",
+    "matching_uses_original_image": true
+  },
+  "line_selection": {
+    "mode": "diverse",
+    "evaluation_budget": 500,
+    "minimum_length_px": 48,
+    "evaluated_segments": 500,
+    "passed_band_filter": 112,
+    "sources": {
+      "hough": {
+        "raw": 3762,
+        "eligible": 3762,
+        "evaluated": 411
+      },
+      "lsd": {
+        "raw": 538,
+        "eligible": 89,
+        "evaluated": 89
+      }
+    },
+    "angle_bin_width_degrees": 10,
+    "evaluated_angle_histogram": [
+      25,
+      24,
+      24,
+      36,
+      33,
+      27,
+      23,
+      25,
+      34,
+      28,
+      23,
+      23,
+      23,
+      26,
+      45,
+      38,
+      22,
+      21
+    ]
+  },
+  "candidate_ranking": {
+    "mode": "near-clear",
+    "scope": "existing_detected_candidates_only",
+    "score_margin": 0.05,
+    "top_detection_score": 1.0,
+    "quality_cutoff": 0.95,
+    "quality_eligible_count": 2,
+    "selected_score_rank": 1,
+    "selected_area_fraction": 0.12091188821898262
+  },
+  "timings_seconds": {
+    "resize_gray_and_preprocessing": 0.009492500001215376,
+    "clahe": 0.0,
+    "line_extraction": 0.8955156999872997,
+    "vanishing_point_classification": 0.03350000000500586,
+    "candidate_evaluation": 0.20529379999788944,
+    "detection_total": 1.1438019999914104
+  },
+  "selected_candidate": 1,
+  "warning": "検出スコアは照合の一致割合・確率ではありません。目視確認が必要です。"
+}

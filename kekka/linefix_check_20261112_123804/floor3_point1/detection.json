@@ -1,0 +1,81 @@
+{
+  "config": {
+    "max_side": 1280,
+    "min_length": 0.1,
+    "dark_difference": 3.0,
+    "line_support": 0.42,
+    "side_support": 0.4,
+    "angle_tolerance": 6.0,
+    "min_area": 0.008,
+    "max_area": 0.65,
+    "max_candidates": 6,
+    "seed": 0,
+    "clahe": false,
+    "clahe_clip_limit": 2.0,
+    "clahe_grid": 8,
+    "line_selection": "balanced"
+  },
+  "source_shape_hw": [
+    5712,
+    4284
+  ],
+  "work_shape_hw": [
+    1280,
+    960
+  ],
+  "raw_segments": 1972,
+  "accepted_lines": 12,
+  "family_counts": [
+    5,
+    5
+  ],
+  "vanishing_points_homogeneous_work": [
+    [
+      0.4130548619394304,
+      -0.910705750331932,
+      0.0008469595921001924
+    ],
+    [
+      0.3931849633854367,
+      0.9194590762267112,
+      0.0007692281296931623
+    ]
+  ],
+  "candidates": [],
+  "preprocessing": {
+    "mode": "none",
+    "clip_limit": null,
+    "grid_size": null,
+    "scope": "detection_only",
+    "matching_uses_original_image": true
+  },
+  "line_selection": {
+    "mode": "balanced",
+    "evaluation_budget": 500,
+    "minimum_length_px": 96,
+    "evaluated_segments": 500,
+    "passed_band_filter": 19,
+    "sources": {
+      "hough": {
+        "raw": 1490,
+        "eligible": 1490,
+        "evaluated": 479
+      },
+      "lsd": {
+        "raw": 482,
+        "eligible": 21,
+        "evaluated": 21
+      }
+    }
+  },
+  "timings_seconds": {
+    "resize_gray_and_preprocessing": 0.009882999999717867,
+    "clahe": 0.0,
+    "line_extraction": 0.8950568999998723,
+    "vanishing_point_classification": 0.014920599999641126,
+    "candidate_evaluation": 0.014378900000338035,
+    "detection_total": 0.9342393999995693
+  },
+  "selected_candidate": null,
+  "warning": "検出スコアは照合の一致割合・確率ではありません。目視確認が必要です。"
+}
