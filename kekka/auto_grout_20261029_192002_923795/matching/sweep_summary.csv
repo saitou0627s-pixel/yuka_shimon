@@ -1,6 +1,0 @@
-﻿grout_keep_percent,predicted_location,best_candidate_location,best_db_tile,best_query_tile,score_percent,fixed_pool_score_percent,second_score_percent,expected_db,expected_tile,correct_identification,correct_tile_identification,correct_location_best_score_percent,false_matches_other_location_tile_pairs,db_features_total,db_grout_features_total,query_features_total,query_grout_features_total,query_surface_features_total,tile_pair_comparisons,orientation_comparisons,selection_seconds,matching_seconds
-100.0,db_10,db_10,1,1,8.064516129032258,8.064516129032258,4.48092280390417,,,,,,,92108,10129,419,268,151,40,160,0.00876670004799962,4.2491871998645365
-75.0,db_10,db_10,1,1,6.779661016949152,6.451612903225806,3.2337290216946375,,,,,,,89579,7600,352,201,151,40,160,0.008590599987655878,4.119987299898639
-50.0,no_match,db_04,4,1,2.420503084954912,2.2626441881100265,2.193548387096774,,,,,,,87053,5074,285,134,151,40,160,0.00868520000949502,3.9083803999237716
-25.0,no_match,db_05,1,1,1.743406347787215,1.5599999999999998,0.0,,,,,,,84515,2536,218,67,151,40,160,0.008526999969035387,3.6771643999964
-0.0,no_match,db_01,1,1,0.0,0.0,0.0,,,,,,,81979,0,151,0,151,40,160,0.00928390002809465,3.609328499995172

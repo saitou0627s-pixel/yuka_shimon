@@ -1,8 +1,0 @@
-2x2床画像のタイル分割結果
-登録元画像：10枚 → 登録タイル：40枚
-撮影元画像：10枚 → 撮影タイル：40枚
-分割方式：auto
-中央目地から除外した幅：左右・上下それぞれ4画素
-登録タイル保存先：C:\Users\saitoukakeru\OneDrive\デスクトップ\yuka_shimon\kekka\senko_tile_test_01\split_images\db_tiles
-撮影タイル保存先：C:\Users\saitoukakeru\OneDrive\デスクトップ\yuka_shimon\kekka\senko_tile_test_01\split_images\satsuei_tiles
-split_previews内の赤線が検出位置、黄線が除外範囲です。

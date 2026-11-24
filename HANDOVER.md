@@ -960,6 +960,25 @@ largeとnearを比較
 
 .\.venv\Scripts\python.exe -u .\step4_auto_grout.py --satsuei "gazou\satsuei\diagonal_angle_5_1.jpg" --run-sweep --expected-db 1
 
+※ 上のコマンドは旧構成（個人用OneDrive内のフォルダと .venv）のもの。2026年11月24日以降の置き場所と、Windowsでの実行方法は SETUP_WINDOWS.md を参照。
+
+Macでの実行方法
+
+コードは ~/yuka_shimon（GitHubからclone、OneDriveの外）にある。写真と実験結果は大学のOneDriveの yuka_shimon_data にあり、~/yuka_shimon/gazou と ~/yuka_shimon/kekka はそこへのシンボリックリンク。Mac用の仮想環境は ~/.venvs/yuka_shimon（OneDriveの外）。VS Codeでは .vscode/settings.json によりこの環境が自動で選ばれる。
+
+初回のみ（環境の作成）：
+
+python3.13 -m venv ~/.venvs/yuka_shimon
+~/.venvs/yuka_shimon/bin/pip install numpy==2.5.4 opencv-python==5.0.0.93
+
+ターミナル（zsh）で実行する。パスの区切りは「/」を使う。
+
+cd ~/yuka_shimon
+source ~/.venvs/yuka_shimon/bin/activate
+python -u step4_auto_grout.py --satsuei "gazou/satsuei/diagonal_angle_5_1.jpg"
+
+ほかのコマンドも、Windows用の例の .\.venv\Scripts\python.exe を python に、「\」を「/」に置き換えれば同じ。
+
 上記は単一DBを想定したコードの実行例である。3〜5階の全120タイルを横断する実験では、対応する複数階照合の実行構成を使用する必要がある。
 
 また、撮影ファイルの改名履歴があるため、実行時には存在するパスを確認すること。
@@ -967,10 +986,10 @@ largeとnearを比較
 主要な保存場所
 
 内容	パス・名称
-研究コード	yuka_shimon
-入力画像	gazou/
+研究コード	GitHub（各PCではOneDriveの外の yuka_shimon に clone）
+入力画像	gazou/（実体は大学OneDriveの yuka_shimon_data/gazou）
 撮影画像	gazou/satsuei/
-実験結果	kekka/
+実験結果	kekka/（実体は大学OneDriveの yuka_shimon_data/kekka）
 3階DB	grout_cache_floor3_20261110_161058
 4階DB	grout_cache_floor4_20261110_164756
 5階DB	grout_cache_floor5_20261107_171614
@@ -998,6 +1017,8 @@ step4_rebuild_grout_db_v2.pyはGitHubへのcommit・pushを確認済みで、記
 一方、最後に確認したGitの状態では、画像・結果・キャッシュ・作業中コードのコピーなどに未追跡ファイルが多数あった。
 
 したがって、すべての画像や最新のコードがGitHubに保存済みとは限らない。新しいAIが作業を開始する際は、ローカルファイルとGitHubの差異を先に確認する必要がある。
+
+2026年11月24日の構成変更：写真（gazou）と実験結果（kekka）はGitでの管理をやめ、大学のOneDriveの yuka_shimon_data に移した（.gitignoreで除外）。それ以前の写真・結果はGitHubの履歴（コミット7e7362fまで）に残っている。GitHubではコードと資料だけを管理する。
 
 16. 新しいAIへの重要な引き継ぎ事項
 

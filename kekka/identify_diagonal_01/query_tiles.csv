@@ -1,5 +1,0 @@
-﻿tile_index,tile_name,tile_file,feature_count,crop_left,crop_top,crop_right,crop_bottom
-1,top_left,shoot_tile_1.png,2500,0,0,1950,3836
-2,top_right,shoot_tile_2.png,2500,1959,0,4284,3836
-3,bottom_left,shoot_tile_3.png,2500,0,3845,1950,5712
-4,bottom_right,shoot_tile_4.png,2500,1959,3845,4284,5712

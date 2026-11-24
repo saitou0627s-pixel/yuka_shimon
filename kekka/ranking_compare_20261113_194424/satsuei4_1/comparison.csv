@@ -1,3 +1,0 @@
-﻿method,status,candidate_count,quality_eligible_count,selected_score_rank,detection_score,area_fraction,center_y_fraction,points_argument,output_directory,ranking_only_seconds,is_complete_tile,expected_floor,expected_location,expected_tile
-large-clear,selected,5,4,4,0.9633465055624644,0.09930020447206592,0.5660481452941895,"659.56,2855.07;2061.43,2285.74;2809.87,3498.63;1218.93,4293.64",large_clear,2.3300002794712782e-05,,,,
-near-clear,selected,5,4,4,0.9633465055624644,0.09930020447206592,0.5660481452941895,"659.56,2855.07;2061.43,2285.74;2809.87,3498.63;1218.93,4293.64",near_clear,7.890000415500253e-05,,,,
