@@ -92,6 +92,10 @@ DEFAULT_FLOOR_DATABASES = (
     (3, "gazou/grout_cache_floor3_20261110_161058"),
     (4, "gazou/grout_cache_floor4_20261110_164756"),
     (5, "gazou/grout_cache_floor5_20261107_171614"),
+    (6, "gazou/grout_cache_floor6_20261126_153904"),
+    (7, "gazou/grout_cache_floor7_20261126_160922"),
+    # 8階は地点10の登録画像を撮り直し中のため未登録
+    (9, "gazou/grout_cache_floor9_20261126_170120"),
 )
 
 
