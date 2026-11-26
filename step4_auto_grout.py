@@ -771,6 +771,8 @@ def run_sweep(args, row, image_path, shape, output):
                "--satsuei-points", row["points_argument"],
                "--points-size", f"{shape[1]},{shape[0]}", "--output", str(output / "matching")]
     # 正解地点・タイルは評価表示専用。検出関数には一切渡さない。
+    if args.expected_floor is not None:
+        command += ["--expected-floor", str(args.expected_floor)]
     if args.expected_db is not None:
         command += ["--expected-db", str(args.expected_db)]
     if args.expected_tile is not None:
@@ -849,6 +851,7 @@ def main():
     parser.add_argument("--output", help="新規の結果フォルダ。省略時は日時付き")
     parser.add_argument("--run-sweep", action="store_true", help="第1候補を既存step4_teian_grout.pyの--sweepに渡す")
     parser.add_argument("--proposal-script", default="step4_teian_grout.py")
+    parser.add_argument("--expected-floor", type=int, help="評価表示専用（複数階DBの採点に必要）。検出・候補選択には使わない")
     parser.add_argument("--expected-db", type=int, help="評価表示専用。検出・候補選択には使わない")
     parser.add_argument("--expected-tile", type=int, help="評価表示専用")
     parser.add_argument("--max-side", type=int, default=1280)
