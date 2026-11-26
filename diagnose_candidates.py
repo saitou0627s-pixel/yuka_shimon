@@ -57,6 +57,9 @@ def enumerate_quads_traced(gray, records, families, c, group_limit=DEFAULT_GROUP
     area_total = gray.shape[0] * gray.shape[1]
     candidates = []
     smooth = cv2.GaussianBlur(gray.astype(np.float32), (3, 3), 0.6)
+    if c.wall_check:
+        texture = ag.texture_map(gray)
+        texture_reference = float(np.median(texture))
     for pair_a in combinations(groups[0], 2):
         for pair_b in combinations(groups[1], 2):
             a, b, d, e = [records[i]["line"] for i in (*pair_a, *pair_b)]
@@ -116,6 +119,12 @@ def enumerate_quads_traced(gray, records, families, c, group_limit=DEFAULT_GROUP
             if min(r["continuity"] for r in sides) < 0.66:
                 reasons["四辺の目地の連続性が不足"] += 1
                 continue
+            outer = None
+            if c.wall_check:
+                outer = ag.outer_texture_ratios(texture, quad, texture_reference)
+                if min((x for x in outer if x is not None), default=np.inf) < c.wall_texture:
+                    reasons["辺の外側が床でない（壁・幅木）"] += 1
+                    continue
             reasons["通過"] += 1
             score = (0.55 * min(supports) + 0.30 * np.mean(supports)
                      + 0.15 * np.mean([min(r["strength"] / 20, 1) for r in sides]))
@@ -124,6 +133,7 @@ def enumerate_quads_traced(gray, records, families, c, group_limit=DEFAULT_GROUP
                                    side_continuity=[r["continuity"] for r in sides],
                                    side_strength=[r["strength"] for r in sides],
                                    side_width=[r["width"] for r in sides],
+                                   outer_texture=outer,
                                    lines=[*pair_a, *pair_b]))
     candidates.sort(key=lambda r: r["score"], reverse=True)
     return candidates, reasons, groups
@@ -281,7 +291,9 @@ def main():
         "タイル候補の診断（検出・照合は変更していません）",
         f"撮影画像：{image_path.name}",
         f"設定：min-length={c.min_length:g}、line-selection={c.line_selection}、"
-        f"CLAHE={'あり' if c.clahe else 'なし'}、四角形に使う線分=各方向{args.group_limit}本"
+        f"CLAHE={'あり' if c.clahe else 'なし'}、"
+        f"壁・幅木の判定={'あり（' + format(c.wall_texture, 'g') + '）' if c.wall_check else 'なし'}、"
+        f"四角形に使う線分=各方向{args.group_limit}本"
         + ("（本体と同じ）" if args.group_limit == DEFAULT_GROUP_LIMIT else "（本体は16本。診断用に変更）"),
         f"線分：検出{raw_count}本 → 目地条件を通過・統合後{len(records)}本",
         f"消失点の方向：{len(families)}系統、各系統の線分数 {family_sizes}"

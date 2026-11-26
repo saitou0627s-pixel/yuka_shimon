@@ -22,6 +22,9 @@ DB作成側も利用する extract_lines 自体には補正を追加しない。
 選び直して診断画像・比較CSVを保存する。比較時は照合を自動実行しない。
 この順位変更は候補抽出後だけに適用し、目地判定条件やDB・照合結果を使わない。
 DB作成側が既定引数で呼ぶ extract_lines の候補選択は従来方式のまま。
+--wall-check は、四辺のすぐ外側の帯に床の細かな模様があるかを調べ、模様の少ない面
+（壁・幅木）に接する候補を除く。輝度ではなく模様量を見るので、明るいタイルとの境目は残る。
+外側が画像外の辺は判定しない。既定はオフで、従来の結果は変わらない。閾値0.45は暫定値。
 消失点が無限遠になる、ほぼ平行な線も同次座標で扱う。
 これは床の意味的セグメンテーションではない。影・模様も誤検出し得る。
 目地が周囲より暗い床を対象とする。設定値は論文由来ではない実験値。
@@ -73,6 +76,8 @@ class Config:
     line_selection: str = "balanced"
     candidate_ranking: str = "score"
     score_margin: float = 0.05  # 検出スコアの差（確率ではない）。暫定値。
+    wall_check: bool = False  # 辺の外側が床かを調べ、壁・幅木に接する候補を除く（既定はオフ）
+    wall_texture: float = 0.45  # 辺の外側の細かな模様の量（画像全体の中央値に対する比）の下限。暫定値。
 
 
 def path_of(value: str) -> Path:
@@ -136,6 +141,44 @@ def band_support(gray: np.ndarray, p: np.ndarray, q: np.ndarray,
             if best is None or score > best["score"]:
                 best = record
     return best
+
+
+def texture_map(gray: np.ndarray) -> np.ndarray:
+    """細かな模様の量。元画像とぼかし画像の差の絶対値（床の粒状模様で大きく、壁で小さい）。"""
+    g = gray.astype(np.float32)
+    return np.abs(g - cv2.GaussianBlur(g, (0, 0), 1.5))
+
+
+def outer_texture_ratios(texture: np.ndarray, quad: np.ndarray, reference: float) -> list:
+    """各辺のすぐ外側の帯の模様量 ÷ 画像全体の模様量の中央値。
+
+    本物の目地なら外側も床タイル、壁・幅木との境界なら外側は模様の少ない面になる。
+    明るいタイルとの境目でも外側は床なので値は大きく残る（輝度ではなく模様量を見るため）。
+    外側の帯が画像外にはみ出す辺は判断せず None とする（画像端のタイルを除外しない）。
+    中央値を使うのは、幅木と壁の境目のような細い強いエッジ1本で値が上がらないようにするため。
+    """
+    center = quad.mean(axis=0)
+    lengths = np.linalg.norm(np.roll(quad, -1, axis=0) - quad, axis=1)
+    width = float(np.clip(0.25 * lengths.mean(), 12, 40))
+    height, image_width = texture.shape
+    ratios = []
+    for p, q in zip(quad, np.roll(quad, -1, axis=0)):
+        direction = (q - p) / max(float(np.linalg.norm(q - p)), 1e-9)
+        normal = np.array([-direction[1], direction[0]])
+        if np.dot((p + q) / 2 - center, normal) < 0:
+            normal = -normal
+        a, b = p + (q - p) * 0.15, q - (q - p) * 0.15  # 角の交差目地を避ける
+        strip = np.float32([a + normal * 10, b + normal * 10,
+                            b + normal * (10 + width), a + normal * (10 + width)])
+        mask = np.zeros((height, image_width), np.uint8)
+        cv2.fillPoly(mask, [np.rint(strip).astype(np.int32)], 255)
+        area = float(cv2.contourArea(strip))
+        inside = mask > 0
+        if area <= 0 or inside.sum() < 0.8 * area:
+            ratios.append(None)
+            continue
+        ratios.append(float(np.median(texture[inside])) / max(reference, 1e-6))
+    return ratios
 
 
 def line_of(p, q):
@@ -370,6 +413,9 @@ def enumerate_quads(gray, records, families, c):
     area_total = gray.shape[0] * gray.shape[1]
     candidates = []
     smooth = cv2.GaussianBlur(gray.astype(np.float32), (3, 3), 0.6)
+    if c.wall_check:
+        texture = texture_map(gray)
+        texture_reference = float(np.median(texture))
     for pair_a in combinations(groups[0], 2):
         for pair_b in combinations(groups[1], 2):
             a, b, d, e = [records[i]["line"] for i in (*pair_a, *pair_b)]
@@ -424,11 +470,17 @@ def enumerate_quads(gray, records, families, c):
                 continue
             if min(r["continuity"] for r in sides) < 0.66:
                 continue
+            outer = None
+            if c.wall_check:
+                outer = outer_texture_ratios(texture, quad, texture_reference)
+                if min((x for x in outer if x is not None), default=np.inf) < c.wall_texture:
+                    continue
             score = (0.55 * min(supports) + 0.30 * np.mean(supports)
                      + 0.15 * np.mean([min(r["strength"] / 20, 1) for r in sides]))
             candidates.append(dict(quad=quad, score=float(score), area=area,
                                    side_support=supports,
-                                   side_width=[r["width"] for r in sides]))
+                                   side_width=[r["width"] for r in sides],
+                                   outer_texture=outer))
     candidates.sort(key=lambda r: r["score"], reverse=True)
     accepted = []
     for r in candidates:
@@ -573,7 +625,8 @@ def save_results(image, result, output, c):
                          area_fraction=r["area"] / result["detection_gray"].size,
                          quad_original_xy=points.tolist(), points_argument=text,
                          side_support=r["side_support"],
-                         estimated_band_offset_px=r["side_width"]))
+                         estimated_band_offset_px=r["side_width"],
+                         outer_texture_ratio=r.get("outer_texture")))
     save_image(output / "04_detected_tiles.jpg", overlay)
     report = dict(config=asdict(c), source_shape_hw=list(image.shape[:2]),
                   work_shape_hw=list(result["work"].shape[:2]),
@@ -591,7 +644,10 @@ def save_results(image, result, output, c):
                   if c.clahe else "CLAHEなし（従来方式）")
     selection = result["line_selection"]
     sources = selection["sources"]
+    wall = (f"あり（辺の外側の模様量が画像全体の{c.wall_texture:g}倍未満の候補を除外）"
+            if c.wall_check else "なし（従来方式）")
     lines = ["目地交点の自動検出（実験実装）", f"検出用前処理：{correction}",
+             f"壁・幅木の判定：{wall}",
              f"線分候補の選択：{selection['mode']}（評価上限500本）",
              f"評価線分：Hough {sources['hough']['evaluated']}本 / LSD {sources['lsd']['evaluated']}本",
              f"目地条件を通過：{selection['passed_band_filter']}本 / 統合後：{len(result['records'])}本",
@@ -765,6 +821,25 @@ def self_test():
     assert detect(image, enabled)["candidates"], "CLAHEありの合成画像を検出できません。"
     assert not detect(np.full((500, 500, 3), 180, np.uint8), enabled)["candidates"]
     print("自己テスト CLAHE: オフの同一性・入力保持・オンの検出・無地の未検出を確認")
+    # 壁・幅木：上部に模様のない白い壁と暗い幅木、その下に粒状模様の床と目地。
+    floor = np.clip(rng.normal(150, 8, (800, 800)), 0, 255).astype(np.uint8)
+    floor = cv2.GaussianBlur(floor, (3, 3), 0.7)
+    for position in (300, 500, 700):
+        cv2.line(floor, (0, position), (799, position), 70, 6)
+    for position in (100, 300, 500, 700):
+        cv2.line(floor, (position, 0), (position, 799), 70, 6)
+    floor[:180] = 225  # 壁（模様なし）
+    floor[165:180] = 60  # 幅木（暗い帯）
+    walled = cv2.cvtColor(floor, cv2.COLOR_GRAY2BGR)
+    plain_walled = detect(walled, c)["candidates"]
+    checked_walled = detect(walled, replace(c, wall_check=True))["candidates"]
+    assert checked_walled, "壁判定ありで床のタイルを検出できません。"
+    assert all(r["quad_original"][:, 1].min() > 250 for r in checked_walled), \
+        "壁判定ありでも幅木に接する候補が残っています。"
+    assert all(min(x for x in r["outer_texture"] if x is not None) >= 0.45 for r in checked_walled)
+    assert detect(image, replace(c, wall_check=True))["candidates"], "壁判定ありで合成の床を検出できません。"
+    wall_adjacent = sum(r["quad_original"][:, 1].min() < 250 for r in plain_walled)
+    print(f"自己テスト 壁判定: 判定なしで幅木に接する候補{wall_adjacent}件 → 判定ありで0件")
     print("自己テスト成功。合成画像の検証であり、実際の床での成功を保証しません。")
 
 
@@ -797,6 +872,10 @@ def main():
     parser.add_argument("--clahe", action="store_true", help="検出用の縮小グレー画像だけをCLAHE補正（既定はオフ）")
     parser.add_argument("--clahe-clip-limit", type=float, default=2.0, help="CLAHEのコントラスト制限。正の有限値（暫定値2.0）")
     parser.add_argument("--clahe-grid", type=int, default=8, help="CLAHEの各軸の画像分割数1～64。床タイル数ではない（既定8）")
+    parser.add_argument("--wall-check", action="store_true",
+                        help="辺の外側が床（細かな模様がある面）かを調べ、壁・幅木に接する候補を除く（既定はオフ）")
+    parser.add_argument("--wall-texture", type=float, default=0.45,
+                        help="辺の外側の模様量（画像全体の中央値に対する比）の下限。0～1（暫定値0.45）")
     parser.add_argument("--self-test", action="store_true")
     args = parser.parse_args()
     if args.self_test:
@@ -817,6 +896,8 @@ def main():
     if (not math.isfinite(c.clahe_clip_limit) or c.clahe_clip_limit <= 0
             or not 1 <= c.clahe_grid <= 64):
         raise ValueError("CLAHE設定が不正です。clip-limitは正の有限値、gridは1～64です。")
+    if not math.isfinite(c.wall_texture) or not 0 < c.wall_texture < 1:
+        raise ValueError("wall-textureは0～1の値です。")
     image_path = path_of(args.satsuei)
     image = read_image(image_path)
     output = path_of(args.output) if args.output else BASE / "kekka" / ("auto_grout_" + datetime.now().strftime("%Y%m%d_%H%M%S_%f"))
