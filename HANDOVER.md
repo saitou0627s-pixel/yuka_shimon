@@ -15,6 +15,7 @@
 * フォルダ構成・PC間の作業の流れ・Windowsのセットアップは SETUP_WINDOWS.md。コードはGitHub、写真（gazou）と実験結果（kekka）は大学OneDriveの yuka_shimon_data にあり、コードフォルダの gazou・kekka はそこへのリンク。
 * 名前の書き分け：「4_4」「satsuei4_4」は撮影画像（4階地点4で照合用に撮った写真）。「4-4」や「4階・地点4・タイル4」は登録DBのタイル（地点4の2×2のうちタイル4＝右下）。タイル番号は1=左上、2=右上、3=左下、4=右下。
 * ゼミの進捗資料は大学OneDriveの yuka_shimon_data/slides にある（GitHubでは管理しない）。
+* 実行の方針（2026年11月27日、ユーザーの決定）：検出・DB作成・照合などの処理はすべて学校のWindowsで行う。Macはコードの読み書きだけに使う。処理時間を比べるため、PCを混ぜないこと。9.8の240タイルの結果はMacで実行したものなので、論文用の処理時間はWindowsで測り直す。
 
 記述は以下の状態を区別する。
 
@@ -427,7 +428,7 @@ step4_rebuild_grout_db_v2.py内のSETTINGS。
 * 学校のWindows（PowerShell、VS Code）と自宅のMac（zsh、VS Code）の2台
 * 仮想環境：OneDriveの外。Windowsは %USERPROFILE%\.venvs\yuka_shimon、Macは ~/.venvs/yuka_shimon（旧 .venv は削除済み）
 * ソースコード管理：Git、GitHub。各PCで --filter=blob:none で clone しており、git config で status.renames・diff.renames・merge.renames を false にしている（昔の写真データを勝手にダウンロードさせないため）
-* 同じ処理でもPCによって照合時間が約2倍違う（Macの方が速い）。処理時間は同じPCで測って比べること
+* 同じ処理でもPCによって照合時間が約2倍違う（Macの方が速いとみられる。同じ画像での比較は未実施）。処理時間は同じPCで測って比べること。今後の処理はすべてWindowsで行う
 * DB作成の --check-db と --build-db は同じPCで続けて実行する（コードのハッシュを確認するため、改行コードの違いで別PCだと止まる）
 
 ライブラリの細かなバージョンは実験日ごとに異なる可能性があるため、正式な再現実験では各出力のexperiment.jsonなどに保存された実行時バージョンを確認すること。
